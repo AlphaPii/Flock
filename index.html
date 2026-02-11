@@ -1,0 +1,132 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FLOCK | School of Fish Simulation</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="panel top-bar">
+    <h1>FLOCK</h1>
+    <p>Emergent schooling from simple local rules</p>
+  </header>
+
+  <main class="layout">
+    <section class="canvas-wrap panel">
+      <canvas id="world" aria-label="Fish schooling simulation"></canvas>
+      <div class="hud" id="hud"></div>
+    </section>
+
+    <aside class="panel controls" aria-label="Schooling controls">
+      <h2>Controls</h2>
+
+      <div class="control-item">
+        <div class="control-head">
+          <label for="count">Fish <span id="countPct" class="label-pct"></span></label>
+          <small class="hint">Total number of fish in the school.</small>
+        </div>
+        <div class="slider-wrap">
+          <input id="count" type="range" min="1" max="3000" step="5" value="180" />
+          <output id="countMeta" class="slider-meta" for="count"></output>
+        </div>
+      </div>
+
+      <div class="control-item">
+        <div class="control-head">
+          <label for="perception">Perception Radius <span id="perceptionPct" class="label-pct"></span></label>
+          <small class="hint">How far each fish senses nearby fish.</small>
+        </div>
+        <div class="slider-wrap">
+          <input id="perception" type="range" min="20" max="140" step="1" value="55" />
+          <output id="perceptionMeta" class="slider-meta" for="perception"></output>
+        </div>
+      </div>
+
+      <div class="control-item">
+        <div class="control-head">
+          <label for="separation">Separation <span id="separationPct" class="label-pct"></span></label>
+          <small class="hint">How strongly fish avoid crowding each other.</small>
+        </div>
+        <div class="slider-wrap">
+          <input id="separation" type="range" min="0" max="3" step="0.05" value="1.45" />
+          <output id="separationMeta" class="slider-meta" for="separation"></output>
+        </div>
+      </div>
+
+      <div class="control-item">
+        <div class="control-head">
+          <label for="alignment">Alignment <span id="alignmentPct" class="label-pct"></span></label>
+          <small class="hint">How strongly fish match nearby heading direction.</small>
+        </div>
+        <div class="slider-wrap">
+          <input id="alignment" type="range" min="0" max="3" step="0.05" value="1.15" />
+          <output id="alignmentMeta" class="slider-meta" for="alignment"></output>
+        </div>
+      </div>
+
+      <div class="control-item">
+        <div class="control-head">
+          <label for="cohesion">Cohesion <span id="cohesionPct" class="label-pct"></span></label>
+          <small class="hint">How strongly fish pull back toward the group.</small>
+        </div>
+        <div class="slider-wrap">
+          <input id="cohesion" type="range" min="0" max="3" step="0.05" value="1.05" />
+          <output id="cohesionMeta" class="slider-meta" for="cohesion"></output>
+        </div>
+      </div>
+
+      <div class="control-item">
+        <div class="control-head">
+          <label for="maxSpeed">Max Speed <span id="maxSpeedPct" class="label-pct"></span></label>
+          <small class="hint">Top swim speed for each fish.</small>
+        </div>
+        <div class="slider-wrap">
+          <input id="maxSpeed" type="range" min="1" max="7" step="0.1" value="3.1" />
+          <output id="maxSpeedMeta" class="slider-meta" for="maxSpeed"></output>
+        </div>
+      </div>
+
+      <div class="control-item">
+        <div class="control-head">
+          <label for="maxForce">Steering Force <span id="maxForcePct" class="label-pct"></span></label>
+          <small class="hint">How quickly fish can turn and change direction.</small>
+        </div>
+        <div class="slider-wrap">
+          <input id="maxForce" type="range" min="0.01" max="0.4" step="0.01" value="0.14" />
+          <output id="maxForceMeta" class="slider-meta" for="maxForce"></output>
+        </div>
+      </div>
+
+      <div class="control-item">
+        <div class="control-head">
+          <label for="edgeAvoidance">Edge Avoidance <span id="edgeAvoidancePct" class="label-pct"></span></label>
+          <small class="hint">How urgently fish steer away from the nearest wall.</small>
+        </div>
+        <div class="slider-wrap">
+          <input id="edgeAvoidance" type="range" min="0" max="1" step="0.01" value="0.4" />
+          <output id="edgeAvoidanceMeta" class="slider-meta" for="edgeAvoidance"></output>
+        </div>
+      </div>
+
+      <div class="control-item">
+        <div class="control-head">
+          <label for="trail">Trail Amount <span id="trailPct" class="label-pct"></span></label>
+          <small class="hint">How long movement streaks remain on screen.</small>
+        </div>
+        <div class="slider-wrap">
+          <input id="trail" type="range" min="0" max="1" step="0.02" value="0.2" />
+          <output id="trailMeta" class="slider-meta" for="trail"></output>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button id="shuffle" type="button">Shuffle</button>
+        <button id="pause" type="button">Pause</button>
+      </div>
+    </aside>
+  </main>
+
+  <script src="main.js" defer></script>
+</body>
+</html>
