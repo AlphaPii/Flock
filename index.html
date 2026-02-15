@@ -1,142 +1,915 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d2a4b" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FLOCK" />
   <title>FLOCK | School of Fish Simulation</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div id="startMenu" class="start-menu" role="dialog" aria-modal="true" aria-labelledby="startMenuTitle">
+    <div class="start-card panel">
+      <h2 id="startMenuTitle">Choose Mode</h2>
+      <p>Select what you want to launch.</p>
+      <div class="start-actions">
+        <button id="startSimulationBtn" type="button" class="start-btn">Simulation</button>
+        <button id="startGameBtn" type="button" class="start-btn start-btn-alt">Game</button>
+      </div>
+      <p id="startMenuHint" class="start-hint" hidden>Game mode design comes next. This is a placeholder.</p>
+    </div>
+  </div>
+
   <header class="panel top-bar">
-    <h1>FLOCK</h1>
-    <p>Emergent schooling from simple local rules</p>
+    <div class="species-bar" aria-label="Creature populations and spawn controls">
+      <button id="speciesAlgae" class="species-chip species-algae" type="button" data-species="algae" aria-label="Spawn algae">
+        <span class="species-icon" aria-hidden="true"></span>
+        <span class="species-name">Algae</span>
+        <span id="speciesCountAlgae" class="species-count">0</span>
+      </button>
+      <button id="speciesFish" class="species-chip species-fish" type="button" data-species="fish" aria-label="Spawn fish">
+        <span class="species-icon" aria-hidden="true"></span>
+        <span class="species-name">Fish</span>
+        <span id="speciesCountFish" class="species-count">0</span>
+      </button>
+      <button id="speciesShrimp" class="species-chip species-shrimp" type="button" data-species="shrimp" aria-label="Spawn shrimp">
+        <span class="species-icon" aria-hidden="true"></span>
+        <span class="species-name">Shrimp</span>
+        <span id="speciesCountShrimp" class="species-count">0</span>
+      </button>
+      <button id="speciesAurel" class="species-chip species-aurel" type="button" data-species="aurel" aria-label="Spawn aurel">
+        <span class="species-icon" aria-hidden="true"></span>
+        <span class="species-name">Aurel</span>
+        <span id="speciesCountAurel" class="species-count">0</span>
+      </button>
+      <button id="speciesZeno" class="species-chip species-zeno" type="button" data-species="zeno" aria-label="Spawn zeno">
+        <span class="species-icon" aria-hidden="true"></span>
+        <span class="species-name">Zeno</span>
+        <span id="speciesCountZeno" class="species-count">0</span>
+      </button>
+    </div>
   </header>
 
   <main class="layout">
     <section class="canvas-wrap panel">
       <canvas id="world" aria-label="Fish schooling simulation"></canvas>
+      <canvas id="predator-layer" aria-hidden="true"></canvas>
       <div class="hud" id="hud"></div>
     </section>
 
-    <aside class="panel controls" aria-label="Schooling controls">
-      <h2>Controls</h2>
-
-      <div class="control-item">
-        <div class="control-head">
-          <label for="count">Fish <span id="countPct" class="label-pct"></span></label>
-          <small class="hint">Total number of fish in the school.</small>
-        </div>
-        <div class="slider-wrap">
-          <input id="count" type="range" min="1" max="20000" step="25" value="180" />
-          <output id="countMeta" class="slider-meta" for="count"></output>
-        </div>
+    <aside id="controlsPanel" class="panel controls" aria-label="Menu">
+      <div id="controlsHandle" class="controls-handle" role="button" tabindex="0" aria-label="Expand controls">
+        <span class="controls-handle-pill"></span>
+        <span id="controlsHandleText" class="controls-handle-text">Swipe Up For Menu</span>
       </div>
 
-      <div class="control-item">
-        <div class="control-head">
-          <label for="perception">Perception Radius <span id="perceptionPct" class="label-pct"></span></label>
-          <small class="hint">How far each fish senses nearby fish.</small>
+      <section id="mobileQuick" class="mobile-quick" aria-label="Quick Menu">
+        <div id="mobileQuickSpeciesHost" class="mobile-species-host" aria-label="Creature cards"></div>
+        <p class="mobile-quick-title">Quick Menu</p>
+        <div class="mobile-quick-tabs" role="tablist" aria-label="Quick control categories">
+          <button id="quickTabStats" class="mobile-quick-tab is-active" type="button" role="tab" aria-selected="true" data-quick-tab="stats">Stats</button>
+          <button id="quickTabScaper" class="mobile-quick-tab" type="button" role="tab" aria-selected="false" data-quick-tab="scaper">Scaper</button>
+          <button id="quickTabPrey" class="mobile-quick-tab" type="button" role="tab" aria-selected="false" data-quick-tab="prey">Fish</button>
+          <button id="quickTabPredator" class="mobile-quick-tab" type="button" role="tab" aria-selected="false" data-quick-tab="predator">Aurels</button>
         </div>
-        <div class="slider-wrap">
-          <input id="perception" type="range" min="20" max="140" step="1" value="55" />
-          <output id="perceptionMeta" class="slider-meta" for="perception"></output>
-        </div>
+
+        <section id="mobileQuickStats" class="mobile-quick-panel is-active" role="tabpanel" aria-labelledby="quickTabStats">
+          <dl class="mobile-quick-stats">
+            <dt>Elapsed</dt><dd id="quickStatElapsed">00:00</dd>
+            <dt>Prey</dt><dd id="quickStatPreyEaten">0</dd>
+            <dt>Bites</dt><dd id="quickStatBitesTaken">0</dd>
+            <dt>Prey/Min</dt><dd id="quickStatPreyPerMinute">0.0</dd>
+            <dt>Bites/Min</dt><dd id="quickStatBitesPerMinute">0.0</dd>
+            <dt>Avg Aurel</dt><dd id="quickStatAverageAurel">0.00</dd>
+            <dt>Avg Zeno</dt><dd id="quickStatAverageZeno">0.00</dd>
+            <dt>Fish</dt><dd id="quickStatFishCount">0</dd>
+            <dt>Shrimp</dt><dd id="quickStatShrimpCount">0</dd>
+            <dt>Algae</dt><dd id="quickStatAlgaeCount">0</dd>
+            <dt>Aurels</dt><dd id="quickStatAurelCount">0</dd>
+            <dt>Zenos</dt><dd id="quickStatZenoCount">0</dd>
+          </dl>
+        </section>
+
+        <section id="mobileQuickSliders" class="mobile-quick-panel" role="tabpanel" hidden>
+          <div id="mobileRecentControls" class="mobile-recent-controls"></div>
+        </section>
+      </section>
+
+      <div id="controlsFull" class="controls-full">
+      <h2>Menu</h2>
+
+      <div class="control-tabs" role="tablist" aria-label="Control categories">
+        <button id="tabStats" class="tab-btn is-active" type="button" role="tab" aria-selected="true" aria-controls="panelStats" data-tab="stats">Stats</button>
+        <button id="tabPrey" class="tab-btn" type="button" role="tab" aria-selected="false" aria-controls="panelPrey" data-tab="prey">Prey</button>
+        <button id="tabScaper" class="tab-btn" type="button" role="tab" aria-selected="false" aria-controls="panelScaper" data-tab="scaper">Scaper</button>
+        <button id="tabPredator" class="tab-btn" type="button" role="tab" aria-selected="false" aria-controls="panelPredator" data-tab="predator">Predator</button>
       </div>
 
-      <div class="control-item">
-        <div class="control-head">
-          <label for="separation">Separation <span id="separationPct" class="label-pct"></span></label>
-          <small class="hint">How strongly fish avoid crowding each other.</small>
+      <section id="panelScaper" class="tab-panel" role="tabpanel" aria-labelledby="tabScaper" hidden>
+        <p class="control-group-title is-first">Input</p>
+        <div class="control-item">
+          <div class="control-head">
+            <label for="mouseThreat">Mouse Threat <span id="mouseThreatPct" class="label-pct"></span></label>
+            <small class="hint">How strongly fish avoid your cursor when it is over the world.</small>
+          </div>
+          <div class="slider-wrap">
+            <input id="mouseThreat" type="range" min="0" max="1" step="0.01" value="1" />
+            <output id="mouseThreatMeta" class="slider-meta" for="mouseThreat"></output>
+          </div>
         </div>
-        <div class="slider-wrap">
-          <input id="separation" type="range" min="0" max="3" step="0.05" value="1.45" />
-          <output id="separationMeta" class="slider-meta" for="separation"></output>
+        <p class="control-group-title">World Bounds</p>
+        <div class="control-item">
+          <div class="control-head">
+            <label for="wallViewportOffset">Wall View Offset <span id="wallViewportOffsetPct" class="label-pct"></span></label>
+            <small class="hint">Pushes effective walls outside the visible screen area.</small>
+          </div>
+          <div class="slider-wrap">
+            <input id="wallViewportOffset" type="range" min="0" max="1" step="0.01" value="0.25" />
+            <output id="wallViewportOffsetMeta" class="slider-meta" for="wallViewportOffset"></output>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="control-item">
-        <div class="control-head">
-          <label for="alignment">Alignment <span id="alignmentPct" class="label-pct"></span></label>
-          <small class="hint">How strongly fish match nearby heading direction.</small>
+      <section id="panelPrey" class="tab-panel" role="tabpanel" aria-labelledby="tabPrey" hidden>
+        <div class="prey-tabs" role="tablist" aria-label="Prey species controls">
+          <button id="preyTabFish" class="prey-tab-btn is-active" type="button" role="tab" aria-selected="true" aria-controls="preyPanelFish" data-prey-tab="fish">Fish</button>
+          <button id="preyTabShrimp" class="prey-tab-btn" type="button" role="tab" aria-selected="false" aria-controls="preyPanelShrimp" data-prey-tab="shrimp">Shrimp</button>
+          <button id="preyTabAlgae" class="prey-tab-btn" type="button" role="tab" aria-selected="false" aria-controls="preyPanelAlgae" data-prey-tab="algae">Algae</button>
         </div>
-        <div class="slider-wrap">
-          <input id="alignment" type="range" min="0" max="3" step="0.05" value="1.15" />
-          <output id="alignmentMeta" class="slider-meta" for="alignment"></output>
-        </div>
-      </div>
 
-      <div class="control-item">
-        <div class="control-head">
-          <label for="cohesion">Cohesion <span id="cohesionPct" class="label-pct"></span></label>
-          <small class="hint">How strongly fish pull back toward the group.</small>
-        </div>
-        <div class="slider-wrap">
-          <input id="cohesion" type="range" min="0" max="3" step="0.05" value="1.05" />
-          <output id="cohesionMeta" class="slider-meta" for="cohesion"></output>
-        </div>
-      </div>
+        <section id="preyPanelFish" class="prey-subpanel is-active" role="tabpanel" aria-labelledby="preyTabFish">
+          <p class="control-group-title is-first">Population</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="count">Fish <span id="countPct" class="label-pct"></span></label>
+              <small class="hint">Total number of fish in the school.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="count" type="range" min="0" max="20000" step="25" value="0" />
+              <output id="countMeta" class="slider-meta" for="count"></output>
+            </div>
+          </div>
 
-      <div class="control-item">
-        <div class="control-head">
-          <label for="maxSpeed">Max Speed <span id="maxSpeedPct" class="label-pct"></span></label>
-          <small class="hint">Top swim speed for each fish.</small>
-        </div>
-        <div class="slider-wrap">
-          <input id="maxSpeed" type="range" min="1" max="7" step="0.1" value="3.1" />
-          <output id="maxSpeedMeta" class="slider-meta" for="maxSpeed"></output>
-        </div>
-      </div>
+          <p class="control-group-title">Schooling</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="perception">Perception Radius <span id="perceptionPct" class="label-pct"></span></label>
+              <small class="hint">How far each fish senses nearby fish.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="perception" type="range" min="20" max="140" step="1" value="35" />
+              <output id="perceptionMeta" class="slider-meta" for="perception"></output>
+            </div>
+          </div>
 
-      <div class="control-item">
-        <div class="control-head">
-          <label for="maxForce">Steering Force <span id="maxForcePct" class="label-pct"></span></label>
-          <small class="hint">How quickly fish can turn and change direction.</small>
-        </div>
-        <div class="slider-wrap">
-          <input id="maxForce" type="range" min="0.01" max="0.4" step="0.01" value="0.14" />
-          <output id="maxForceMeta" class="slider-meta" for="maxForce"></output>
-        </div>
-      </div>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="separation">Separation <span id="separationPct" class="label-pct"></span></label>
+              <small class="hint">How strongly fish avoid crowding each other.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="separation" type="range" min="0" max="3" step="0.05" value="1.65" />
+              <output id="separationMeta" class="slider-meta" for="separation"></output>
+            </div>
+          </div>
 
-      <div class="control-item">
-        <div class="control-head">
-          <label for="edgeAvoidance">Edge Avoidance <span id="edgeAvoidancePct" class="label-pct"></span></label>
-          <small class="hint">How urgently fish steer away from the nearest wall.</small>
-        </div>
-        <div class="slider-wrap">
-          <input id="edgeAvoidance" type="range" min="0" max="1" step="0.01" value="0.4" />
-          <output id="edgeAvoidanceMeta" class="slider-meta" for="edgeAvoidance"></output>
-        </div>
-      </div>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="clusterAvoidance">Cluster Avoidance <span id="clusterAvoidancePct" class="label-pct"></span></label>
+              <small class="hint">How strongly fish push away from high local fish density.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="clusterAvoidance" type="range" min="0" max="3" step="0.05" value="0.8" />
+              <output id="clusterAvoidanceMeta" class="slider-meta" for="clusterAvoidance"></output>
+            </div>
+          </div>
 
-      <div class="control-item">
-        <div class="control-head">
-          <label for="mouseThreat">Mouse Threat <span id="mouseThreatPct" class="label-pct"></span></label>
-          <small class="hint">How strongly fish avoid your cursor when it is over the world.</small>
-        </div>
-        <div class="slider-wrap">
-          <input id="mouseThreat" type="range" min="0" max="1" step="0.01" value="0.35" />
-          <output id="mouseThreatMeta" class="slider-meta" for="mouseThreat"></output>
-        </div>
-      </div>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="alignment">Alignment <span id="alignmentPct" class="label-pct"></span></label>
+              <small class="hint">How strongly fish match nearby heading direction.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="alignment" type="range" min="0" max="3" step="0.05" value="1.5" />
+              <output id="alignmentMeta" class="slider-meta" for="alignment"></output>
+            </div>
+          </div>
 
-      <div class="control-item">
-        <div class="control-head">
-          <label for="trail">Trail Amount <span id="trailPct" class="label-pct"></span></label>
-          <small class="hint">How long movement streaks remain on screen.</small>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="cohesion">Cohesion <span id="cohesionPct" class="label-pct"></span></label>
+              <small class="hint">How strongly fish pull back toward the group.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="cohesion" type="range" min="0" max="3" step="0.05" value="1.2" />
+              <output id="cohesionMeta" class="slider-meta" for="cohesion"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Locomotion</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="maxSpeed">Max Speed <span id="maxSpeedPct" class="label-pct"></span></label>
+              <small class="hint">Top swim speed for each fish.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="maxSpeed" type="range" min="1" max="7" step="0.1" value="3" />
+              <output id="maxSpeedMeta" class="slider-meta" for="maxSpeed"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="maxForce">Steering Force <span id="maxForcePct" class="label-pct"></span></label>
+              <small class="hint">How quickly fish can turn and change direction.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="maxForce" type="range" min="0.01" max="0.4" step="0.01" value="0.14" />
+              <output id="maxForceMeta" class="slider-meta" for="maxForce"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Walls</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="wallReach">Wall Reach <span id="wallReachPct" class="label-pct"></span></label>
+              <small class="hint">How far wall influence reaches inward (capped to never overlap opposite walls).</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="wallReach" type="range" min="0" max="1" step="0.01" value="0.75" />
+              <output id="wallReachMeta" class="slider-meta" for="wallReach"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="wallFade">Wall Fade <span id="wallFadePct" class="label-pct"></span></label>
+              <small class="hint">How quickly wall force fades with distance (higher = faster fade).</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="wallFade" type="range" min="0.5" max="4" step="0.1" value="4" />
+              <output id="wallFadeMeta" class="slider-meta" for="wallFade"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="wallStrength">Wall Strength <span id="wallStrengthPct" class="label-pct"></span></label>
+              <small class="hint">Overall strength of wall avoidance relative to schooling forces.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="wallStrength" type="range" min="0" max="2" step="0.01" value="1" />
+              <output id="wallStrengthMeta" class="slider-meta" for="wallStrength"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Algae Feeding</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="fishAlgaeInterestCooldown">Algae Cooldown <span id="fishAlgaeInterestCooldownPct" class="label-pct"></span></label>
+              <small class="hint">Time (ms) before fish becomes interested in algae again.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="fishAlgaeInterestCooldown" type="range" min="0" max="3000" step="50" value="250" />
+              <output id="fishAlgaeInterestCooldownMeta" class="slider-meta" for="fishAlgaeInterestCooldown"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="fishAlgaeMealsToReproduce">Algae Per Reproduction <span id="fishAlgaeMealsToReproducePct" class="label-pct"></span></label>
+              <small class="hint">Base number of algae fish must eat to reproduce.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="fishAlgaeMealsToReproduce" type="range" min="1" max="60" step="1" value="6" />
+              <output id="fishAlgaeMealsToReproduceMeta" class="slider-meta" for="fishAlgaeMealsToReproduce"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="fishPopulationPenalty">Population Penalty <span id="fishPopulationPenaltyPct" class="label-pct"></span></label>
+              <small class="hint">How strongly high fish population increases algae needed for reproduction.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="fishPopulationPenalty" type="range" min="0" max="6" step="0.05" value="1" />
+              <output id="fishPopulationPenaltyMeta" class="slider-meta" for="fishPopulationPenalty"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Rendering</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="trail">Trail Amount <span id="trailPct" class="label-pct"></span></label>
+              <small class="hint">How long movement streaks remain on screen.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="trail" type="range" min="0" max="1" step="0.02" value="0" />
+              <output id="trailMeta" class="slider-meta" for="trail"></output>
+            </div>
+          </div>
+        </section>
+
+        <section id="preyPanelShrimp" class="prey-subpanel" role="tabpanel" aria-labelledby="preyTabShrimp" hidden>
+          <p class="control-group-title is-first">Population</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpCount">Shrimp <span id="shrimpCountPct" class="label-pct"></span></label>
+              <small class="hint">Total number of shrimp in the school.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpCount" type="range" min="0" max="20000" step="25" value="750" />
+              <output id="shrimpCountMeta" class="slider-meta" for="shrimpCount"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Schooling</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpPerception">Perception Radius <span id="shrimpPerceptionPct" class="label-pct"></span></label>
+              <small class="hint">How far each shrimp senses nearby shrimp.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpPerception" type="range" min="20" max="140" step="1" value="20" />
+              <output id="shrimpPerceptionMeta" class="slider-meta" for="shrimpPerception"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpSeparation">Separation <span id="shrimpSeparationPct" class="label-pct"></span></label>
+              <small class="hint">How strongly shrimp avoid crowding each other.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpSeparation" type="range" min="0" max="3" step="0.05" value="1.65" />
+              <output id="shrimpSeparationMeta" class="slider-meta" for="shrimpSeparation"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpClusterAvoidance">Cluster Avoidance <span id="shrimpClusterAvoidancePct" class="label-pct"></span></label>
+              <small class="hint">How strongly shrimp push away from high local shrimp density.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpClusterAvoidance" type="range" min="0" max="3" step="0.05" value="0.8" />
+              <output id="shrimpClusterAvoidanceMeta" class="slider-meta" for="shrimpClusterAvoidance"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpAlignment">Alignment <span id="shrimpAlignmentPct" class="label-pct"></span></label>
+              <small class="hint">How strongly shrimp match nearby heading direction.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpAlignment" type="range" min="0" max="3" step="0.05" value="1.05" />
+              <output id="shrimpAlignmentMeta" class="slider-meta" for="shrimpAlignment"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpCohesion">Cohesion <span id="shrimpCohesionPct" class="label-pct"></span></label>
+              <small class="hint">How strongly shrimp pull back toward the group.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpCohesion" type="range" min="0" max="3" step="0.05" value="0.55" />
+              <output id="shrimpCohesionMeta" class="slider-meta" for="shrimpCohesion"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Locomotion</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpJumpSpeed">Jump Speed <span id="shrimpJumpSpeedPct" class="label-pct"></span></label>
+              <small class="hint">How fast shrimp can burst away from threats (base speed is fixed at 1).</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpJumpSpeed" type="range" min="0" max="7" step="0.1" value="4.5" />
+              <output id="shrimpJumpSpeedMeta" class="slider-meta" for="shrimpJumpSpeed"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpMaxForce">Steering Force <span id="shrimpMaxForcePct" class="label-pct"></span></label>
+              <small class="hint">How quickly shrimp can turn and change direction.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpMaxForce" type="range" min="0.01" max="0.4" step="0.01" value="0.26" />
+              <output id="shrimpMaxForceMeta" class="slider-meta" for="shrimpMaxForce"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Walls</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpWallReach">Wall Reach <span id="shrimpWallReachPct" class="label-pct"></span></label>
+              <small class="hint">How far wall influence reaches inward for shrimp.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpWallReach" type="range" min="0" max="1" step="0.01" value="0.7" />
+              <output id="shrimpWallReachMeta" class="slider-meta" for="shrimpWallReach"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpWallFade">Wall Fade <span id="shrimpWallFadePct" class="label-pct"></span></label>
+              <small class="hint">How quickly shrimp wall force fades with distance.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpWallFade" type="range" min="0.5" max="4" step="0.1" value="3.2" />
+              <output id="shrimpWallFadeMeta" class="slider-meta" for="shrimpWallFade"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpWallStrength">Wall Strength <span id="shrimpWallStrengthPct" class="label-pct"></span></label>
+              <small class="hint">Overall wall-avoidance strength for shrimp.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpWallStrength" type="range" min="0" max="2" step="0.01" value="1" />
+              <output id="shrimpWallStrengthMeta" class="slider-meta" for="shrimpWallStrength"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Cross-Species</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpFishAvoidance">Fish Avoidance <span id="shrimpFishAvoidancePct" class="label-pct"></span></label>
+              <small class="hint">Extra shrimp separation force triggered by nearby prey fish.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpFishAvoidance" type="range" min="0" max="3" step="0.05" value="0.9" />
+              <output id="shrimpFishAvoidanceMeta" class="slider-meta" for="shrimpFishAvoidance"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Algae Feeding</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpAlgaeInterestCooldown">Algae Cooldown <span id="shrimpAlgaeInterestCooldownPct" class="label-pct"></span></label>
+              <small class="hint">Time (ms) before shrimp becomes interested in algae again.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpAlgaeInterestCooldown" type="range" min="0" max="3000" step="50" value="350" />
+              <output id="shrimpAlgaeInterestCooldownMeta" class="slider-meta" for="shrimpAlgaeInterestCooldown"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpAlgaeMealsToReproduce">Algae Per Reproduction <span id="shrimpAlgaeMealsToReproducePct" class="label-pct"></span></label>
+              <small class="hint">Base number of algae shrimp must eat to reproduce.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpAlgaeMealsToReproduce" type="range" min="1" max="60" step="1" value="8" />
+              <output id="shrimpAlgaeMealsToReproduceMeta" class="slider-meta" for="shrimpAlgaeMealsToReproduce"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpPopulationPenalty">Population Penalty <span id="shrimpPopulationPenaltyPct" class="label-pct"></span></label>
+              <small class="hint">How strongly high shrimp population increases algae needed for reproduction.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpPopulationPenalty" type="range" min="0" max="6" step="0.05" value="1" />
+              <output id="shrimpPopulationPenaltyMeta" class="slider-meta" for="shrimpPopulationPenalty"></output>
+            </div>
+          </div>
+        </section>
+
+        <section id="preyPanelAlgae" class="prey-subpanel" role="tabpanel" aria-labelledby="preyTabAlgae" hidden>
+          <p class="control-group-title is-first">Population</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaeCount">Algae <span id="algaeCountPct" class="label-pct"></span></label>
+              <small class="hint">Total number of algae particles.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaeCount" type="range" min="0" max="20000" step="25" value="0" />
+              <output id="algaeCountMeta" class="slider-meta" for="algaeCount"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Flow Response</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaePerception">Perception Radius <span id="algaePerceptionPct" class="label-pct"></span></label>
+              <small class="hint">How far algae samples local flow from nearby life.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaePerception" type="range" min="10" max="140" step="1" value="40" />
+              <output id="algaePerceptionMeta" class="slider-meta" for="algaePerception"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaeCurrentSensitivity">Current Sensitivity <span id="algaeCurrentSensitivityPct" class="label-pct"></span></label>
+              <small class="hint">How strongly algae follows the local average movement.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaeCurrentSensitivity" type="range" min="0" max="3" step="0.05" value="0.8" />
+              <output id="algaeCurrentSensitivityMeta" class="slider-meta" for="algaeCurrentSensitivity"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaeSeparation">Separation <span id="algaeSeparationPct" class="label-pct"></span></label>
+              <small class="hint">How strongly algae spreads away from nearby algae.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaeSeparation" type="range" min="0" max="3" step="0.05" value="0.4" />
+              <output id="algaeSeparationMeta" class="slider-meta" for="algaeSeparation"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaeSpeed">Speed <span id="algaeSpeedPct" class="label-pct"></span></label>
+              <small class="hint">Max self-propelled speed for algae-driven separation.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaeSpeed" type="range" min="0" max="3" step="0.05" value="0.8" />
+              <output id="algaeSpeedMeta" class="slider-meta" for="algaeSpeed"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Reproduction</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaeGrowthRate">Growth Rate <span id="algaeGrowthRatePct" class="label-pct"></span></label>
+              <small class="hint">How quickly algae reproduces at low population pressure.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaeGrowthRate" type="range" min="0" max="2" step="0.01" value="2" />
+              <output id="algaeGrowthRateMeta" class="slider-meta" for="algaeGrowthRate"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaePopulationPenalty">Population Penalty <span id="algaePopulationPenaltyPct" class="label-pct"></span></label>
+              <small class="hint">How strongly algae growth is reduced as algae population rises.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaePopulationPenalty" type="range" min="0" max="6" step="0.05" value="0" />
+              <output id="algaePopulationPenaltyMeta" class="slider-meta" for="algaePopulationPenalty"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Walls</p>
+          <div class="control-item control-item-toggle">
+            <div class="control-head">
+              <label for="algaeToroidal">Toroidal Borders</label>
+              <small class="hint">If enabled, algae wraps through opposite edges instead of bouncing off walls.</small>
+            </div>
+            <div class="toggle-wrap">
+              <input id="algaeToroidal" type="checkbox" checked />
+            </div>
+          </div>
+          <div id="algaeWallControls" class="algae-wall-controls">
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaeWallReach">Wall Reach <span id="algaeWallReachPct" class="label-pct"></span></label>
+              <small class="hint">How far wall influence reaches inward for algae.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaeWallReach" type="range" min="0" max="1" step="0.01" value="0.5" />
+              <output id="algaeWallReachMeta" class="slider-meta" for="algaeWallReach"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaeWallFade">Wall Fade <span id="algaeWallFadePct" class="label-pct"></span></label>
+              <small class="hint">How quickly algae wall force fades with distance.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaeWallFade" type="range" min="0.5" max="4" step="0.1" value="4" />
+              <output id="algaeWallFadeMeta" class="slider-meta" for="algaeWallFade"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaeWallStrength">Wall Strength <span id="algaeWallStrengthPct" class="label-pct"></span></label>
+              <small class="hint">Overall wall-avoidance strength for algae.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaeWallStrength" type="range" min="0" max="2" step="0.01" value="0.4" />
+              <output id="algaeWallStrengthMeta" class="slider-meta" for="algaeWallStrength"></output>
+            </div>
+          </div>
+          </div>
+        </section>
+      </section>
+
+      <section id="panelPredator" class="tab-panel" role="tabpanel" aria-labelledby="tabPredator" hidden>
+        <div class="predator-tabs" role="tablist" aria-label="Predator species controls">
+          <button id="predatorTabA" class="predator-tab-btn is-active" type="button" role="tab" aria-selected="true" aria-controls="predatorPanelA" data-predator-tab="a"><span id="predatorNameALabel">Aurels</span></button>
+          <button id="predatorTabB" class="predator-tab-btn" type="button" role="tab" aria-selected="false" aria-controls="predatorPanelB" data-predator-tab="b"><span id="predatorNameBLabel">Zenos</span></button>
         </div>
-        <div class="slider-wrap">
-          <input id="trail" type="range" min="0" max="1" step="0.02" value="0.2" />
-          <output id="trailMeta" class="slider-meta" for="trail"></output>
-        </div>
-      </div>
+
+        <section id="predatorPanelA" class="predator-subpanel is-active" role="tabpanel" aria-labelledby="predatorTabA">
+          <p class="control-group-title is-first">Size</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predatorSize">Size <span id="predatorSizePct" class="label-pct"></span></label>
+              <small class="hint">Minimum size for Aurels.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predatorSize" type="range" min="1.2" max="12" step="0.1" value="2" />
+              <output id="predatorSizeMeta" class="slider-meta" for="predatorSize"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predatorGrowthSpan">Growth Span <span id="predatorGrowthSpanPct" class="label-pct"></span></label>
+              <small class="hint">How far max size extends above minimum size.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predatorGrowthSpan" type="range" min="0" max="2" step="0.01" value="2" />
+              <output id="predatorGrowthSpanMeta" class="slider-meta" for="predatorGrowthSpan"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Behavior</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predatorThreat">Threat <span id="predatorThreatPct" class="label-pct"></span></label>
+              <small class="hint">How strongly prey fish avoid Aurels.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predatorThreat" type="range" min="0" max="2" step="0.01" value="1.2" />
+              <output id="predatorThreatMeta" class="slider-meta" for="predatorThreat"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predatorSeparation">Separation <span id="predatorSeparationPct" class="label-pct"></span></label>
+              <small class="hint">How strongly Aurels avoid others.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predatorSeparation" type="range" min="0" max="3" step="0.05" value="2" />
+              <output id="predatorSeparationMeta" class="slider-meta" for="predatorSeparation"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predatorSteeringForce">Steering <span id="predatorSteeringForcePct" class="label-pct"></span></label>
+              <small class="hint">How quickly Aurels can turn and redirect.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predatorSteeringForce" type="range" min="0.01" max="0.8" step="0.01" value="0.24" />
+              <output id="predatorSteeringForceMeta" class="slider-meta" for="predatorSteeringForce"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Sprint</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predatorMaxSpeed">Speed <span id="predatorMaxSpeedPct" class="label-pct"></span></label>
+              <small class="hint">Top speed for Aurels before sprint bonus.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predatorMaxSpeed" type="range" min="0.8" max="10" step="0.1" value="10" />
+              <output id="predatorMaxSpeedMeta" class="slider-meta" for="predatorMaxSpeed"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predatorMaxSprint">Max Sprint <span id="predatorMaxSprintPct" class="label-pct"></span></label>
+              <small class="hint">How much extra speed sprint can add.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predatorMaxSprint" type="range" min="0" max="3" step="0.05" value="1.2" />
+              <output id="predatorMaxSprintMeta" class="slider-meta" for="predatorMaxSprint"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predatorSprintDrain">Sprint Drain <span id="predatorSprintDrainPct" class="label-pct"></span></label>
+              <small class="hint">How much size is drained while sprinting.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predatorSprintDrain" type="range" min="0" max="0.08" step="0.001" value="0" />
+              <output id="predatorSprintDrainMeta" class="slider-meta" for="predatorSprintDrain"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predatorAggressiveness">Aggressiveness <span id="predatorAggressivenessPct" class="label-pct"></span></label>
+              <small class="hint">How far away prey can be before sprint starts.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predatorAggressiveness" type="range" min="0" max="1" step="0.01" value="0.1" />
+              <output id="predatorAggressivenessMeta" class="slider-meta" for="predatorAggressiveness"></output>
+            </div>
+          </div>
+        </section>
+
+        <section id="predatorPanelB" class="predator-subpanel" role="tabpanel" aria-labelledby="predatorTabB" hidden>
+          <p class="control-group-title is-first">Size & Damage</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predator2SizeFraction">Size Fraction <span id="predator2SizeFractionPct" class="label-pct"></span></label>
+              <small class="hint">Fraction of Aurel size range (0.5 to 0.9).</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predator2SizeFraction" type="range" min="0.5" max="0.9" step="0.01" value="0.7" />
+              <output id="predator2SizeFractionMeta" class="slider-meta" for="predator2SizeFraction"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predator2Damage">Damage <span id="predator2DamagePct" class="label-pct"></span></label>
+              <small class="hint">How much size is stolen per hit from Aurels.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predator2Damage" type="range" min="0.01" max="1" step="0.01" value="0.4" />
+              <output id="predator2DamageMeta" class="slider-meta" for="predator2Damage"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Behavior</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predator2Threat">Threat <span id="predator2ThreatPct" class="label-pct"></span></label>
+              <small class="hint">How strongly Aurels avoid Zenos.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predator2Threat" type="range" min="0" max="2" step="0.01" value="1" />
+              <output id="predator2ThreatMeta" class="slider-meta" for="predator2Threat"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predator2Separation">Separation <span id="predator2SeparationPct" class="label-pct"></span></label>
+              <small class="hint">How strongly Zenos avoid each other.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predator2Separation" type="range" min="0" max="3" step="0.05" value="0.5" />
+              <output id="predator2SeparationMeta" class="slider-meta" for="predator2Separation"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predator2SteeringForce">Steering <span id="predator2SteeringForcePct" class="label-pct"></span></label>
+              <small class="hint">How quickly Zenos can turn and redirect.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predator2SteeringForce" type="range" min="0.01" max="0.8" step="0.01" value="0.5" />
+              <output id="predator2SteeringForceMeta" class="slider-meta" for="predator2SteeringForce"></output>
+            </div>
+          </div>
+
+          <p class="control-group-title">Sprint</p>
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predator2Speed">Speed <span id="predator2SpeedPct" class="label-pct"></span></label>
+              <small class="hint">Top speed for Zenos.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predator2Speed" type="range" min="0.8" max="10" step="0.1" value="3" />
+              <output id="predator2SpeedMeta" class="slider-meta" for="predator2Speed"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predator2MaxSprint">Max Sprint <span id="predator2MaxSprintPct" class="label-pct"></span></label>
+              <small class="hint">How much extra sprint speed Zenos can add.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predator2MaxSprint" type="range" min="0" max="3" step="0.05" value="3" />
+              <output id="predator2MaxSprintMeta" class="slider-meta" for="predator2MaxSprint"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predator2SprintDrain">Sprint Drain <span id="predator2SprintDrainPct" class="label-pct"></span></label>
+              <small class="hint">How much size is drained while Zenos sprint.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predator2SprintDrain" type="range" min="0" max="0.08" step="0.001" value="0" />
+              <output id="predator2SprintDrainMeta" class="slider-meta" for="predator2SprintDrain"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="predator2Aggressiveness">Aggressiveness <span id="predator2AggressivenessPct" class="label-pct"></span></label>
+              <small class="hint">How far away Aurels can be before Zenos sprint.</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="predator2Aggressiveness" type="range" min="0" max="1" step="0.01" value="0.4" />
+              <output id="predator2AggressivenessMeta" class="slider-meta" for="predator2Aggressiveness"></output>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section id="panelStats" class="tab-panel is-active" role="tabpanel" aria-labelledby="tabStats">
+        <dl class="stats-list" aria-live="polite">
+          <dt>Time Elapsed</dt>
+          <dd id="statElapsed">00:00</dd>
+
+          <dt>Prey Eaten</dt>
+          <dd id="statPreyEaten">0</dd>
+
+          <dt>Bites Taken</dt>
+          <dd id="statBitesTaken">0</dd>
+
+          <dd class="stats-divider" aria-hidden="true"></dd>
+
+          <dt>Prey / Min</dt>
+          <dd id="statPreyPerMinute">0.0</dd>
+
+          <dt>Bites / Min</dt>
+          <dd id="statZenoBitesPerMinute">0.0</dd>
+
+          <dd class="stats-divider" aria-hidden="true"></dd>
+
+          <dt>Average Aurel</dt>
+          <dd id="statAverageAurel">0.00</dd>
+
+          <dt>Average Zeno</dt>
+          <dd id="statAverageZeno">0.00</dd>
+
+          <dd class="stats-divider" aria-hidden="true"></dd>
+
+          <dt>Fish</dt>
+          <dd id="statFishCount">0</dd>
+
+          <dt>Shrimp</dt>
+          <dd id="statShrimpCount">0</dd>
+
+          <dt>Algae</dt>
+          <dd id="statAlgaeCount">0</dd>
+
+          <dt>Aurels</dt>
+          <dd id="statAurelCount">0</dd>
+
+          <dt>Zenos</dt>
+          <dd id="statZenoCount">0</dd>
+        </dl>
+      </section>
 
       <div class="buttons">
-        <button id="shuffle" type="button">Shuffle</button>
+        <button id="restart" type="button">Restart</button>
         <button id="pause" type="button">Pause</button>
+      </div>
       </div>
     </aside>
   </main>
+
+  <section id="gameModeScreen" class="game-mode" hidden aria-label="Game mode placeholder">
+    <div class="game-mode-card panel">
+      <h2>Game Mode</h2>
+      <p>Game mode UI will be designed next.</p>
+      <div class="game-mode-actions">
+        <button id="gameBackBtn" type="button">Back</button>
+        <button id="gameToSimulationBtn" type="button">Go To Simulation</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="restartDialog" class="restart-dialog" role="dialog" aria-modal="true" aria-labelledby="restartDialogTitle" hidden>
+    <div class="restart-card panel">
+      <h3 id="restartDialogTitle">Restart Options</h3>
+      <p>Choose how you want to restart.</p>
+      <div class="restart-actions">
+        <button type="button" class="restart-action" data-restart-action="full">Full Restart</button>
+        <button type="button" class="restart-action" data-restart-action="reset-scaling">Reset Scaling</button>
+        <button type="button" class="restart-action" data-restart-action="keep-settings">Keep Settings</button>
+        <button type="button" class="restart-action restart-cancel" data-restart-action="cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script src="main.js" defer></script>
 </body>

@@ -1,0 +1,17 @@
+{
+  "name": "FLOCK",
+  "short_name": "FLOCK",
+  "description": "Emergent schooling from simple local rules.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#061223",
+  "theme_color": "#0d2a4b",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
