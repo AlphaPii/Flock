@@ -19,6 +19,10 @@ const ALGAE_FLOW_WEIGHTS = {
   aurel: 1.8
 };
 
+const FISH_GRID_REF = { heads: null, next: null, cellSize: 0, cols: 0, rows: 0 };
+const SHRIMP_GRID_REF = { heads: null, next: null, cellSize: 0, cols: 0, rows: 0 };
+const ALGAE_GRID_REF = { heads: null, next: null, cellSize: 0, cols: 0, rows: 0 };
+
 const state = {
   boids: [],
   shrimps: [],
@@ -77,6 +81,8 @@ const params = {
   fishAlgaeInterestCooldown: 250,
   fishAlgaeMealsToReproduce: 6,
   fishPopulationPenalty: 1.0,
+  fishPopulationPenaltyDelay: 0.0,
+  fishToroidal: false,
   shrimpCount: 10000,
   shrimpPerception: 20,
   shrimpSeparation: 1.65,
@@ -93,6 +99,8 @@ const params = {
   shrimpAlgaeInterestCooldown: 350,
   shrimpAlgaeMealsToReproduce: 8,
   shrimpPopulationPenalty: 1.0,
+  shrimpPopulationPenaltyDelay: 0.0,
+  shrimpToroidal: false,
   algaeCount: 0,
   algaePerception: 40,
   algaeCurrentSensitivity: 0.8,
@@ -124,6 +132,7 @@ const params = {
   algaeWallStrength: 0.4,
   algaeGrowthRate: 2.0,
   algaePopulationPenalty: 0.0,
+  algaePopulationPenaltyDelay: 0.0,
   algaeToroidal: true,
   trail: 0
 };
@@ -169,16 +178,30 @@ function getCapPressure(count, cap) {
   return Math.max(0, Math.min(1, count / cap));
 }
 
-function getSoftReproductionAllowance(count, cap, penaltySeverity = 1) {
-  const pressure = getCapPressure(count, cap);
+function getDelayedPenaltyPressure(count, cap, delayPercent = 0) {
+  if (cap <= 0) return 1;
+  // Delay is configured as % of population cap where penalty begins.
+  // Backward-compatible: values <= 1 are treated as a legacy fraction.
+  const raw = Number(delayPercent) || 0;
+  const delayFraction = raw <= 1 ? raw : raw / 100;
+  const delay = Math.max(0, Math.min(0.95, delayFraction));
+  if (delay <= 0) return getCapPressure(count, cap);
+  const startCount = cap * delay;
+  if (count <= startCount) return 0;
+  const span = Math.max(1, cap - startCount);
+  return Math.max(0, Math.min(1, (count - startCount) / span));
+}
+
+function getSoftReproductionAllowance(count, cap, penaltySeverity = 1, penaltyDelay = 0) {
+  const pressure = getDelayedPenaltyPressure(count, cap, penaltyDelay);
   const severity = Math.max(0, penaltySeverity);
   return Math.max(0, 1 - Math.pow(pressure, 1 + severity * 1.2));
 }
 
-function getRequiredMeals(baseMeals, count, cap, penaltySeverity) {
+function getRequiredMeals(baseMeals, count, cap, penaltySeverity, penaltyDelay = 0) {
   const base = Math.max(1, baseMeals);
   const severity = Math.max(0, penaltySeverity);
-  const pressure = Math.max(0, Math.min(0.999, getCapPressure(count, cap)));
+  const pressure = Math.max(0, Math.min(0.999, getDelayedPenaltyPressure(count, cap, penaltyDelay)));
   const inflation = 1 + severity * (pressure * pressure) / Math.max(0.04, 1 - pressure);
   return base * inflation;
 }
@@ -294,6 +317,15 @@ class Boid {
   edges() {
     const margin = Math.max(MIN_EDGE_MARGIN, this.size * 1.7);
     const bounds = getWorldBounds(margin);
+    if (params.fishToroidal) {
+      const spanX = Math.max(1, bounds.width);
+      const spanY = Math.max(1, bounds.height);
+      while (this.pos.x < bounds.left) this.pos.x += spanX;
+      while (this.pos.x > bounds.right) this.pos.x -= spanX;
+      while (this.pos.y < bounds.top) this.pos.y += spanY;
+      while (this.pos.y > bounds.bottom) this.pos.y -= spanY;
+      return;
+    }
 
     if (this.pos.x < bounds.left) {
       this.pos.x = bounds.left;
@@ -313,6 +345,7 @@ class Boid {
   }
 
   avoidEdges() {
+    if (params.fishToroidal) return 0;
     const wallStrength = Math.max(0, params.wallStrength);
     if (wallStrength <= 0) return 0;
 
@@ -678,6 +711,15 @@ class Shrimp {
   edges() {
     const margin = Math.max(MIN_EDGE_MARGIN, this.size * 1.5);
     const bounds = getWorldBounds(margin);
+    if (params.shrimpToroidal) {
+      const spanX = Math.max(1, bounds.width);
+      const spanY = Math.max(1, bounds.height);
+      while (this.pos.x < bounds.left) this.pos.x += spanX;
+      while (this.pos.x > bounds.right) this.pos.x -= spanX;
+      while (this.pos.y < bounds.top) this.pos.y += spanY;
+      while (this.pos.y > bounds.bottom) this.pos.y -= spanY;
+      return;
+    }
 
     if (this.pos.x < bounds.left) {
       this.pos.x = bounds.left;
@@ -697,6 +739,7 @@ class Shrimp {
   }
 
   avoidEdges() {
+    if (params.shrimpToroidal) return 0;
     const wallStrength = Math.max(0, params.shrimpWallStrength);
     if (wallStrength <= 0) return 0;
 
@@ -1892,6 +1935,38 @@ function getAdaptiveGridInterval() {
   return 1;
 }
 
+function getAdaptiveSpacingInterval() {
+  const count = getTotalPreyCount();
+  if (count >= 20000) return 4;
+  if (count >= 14000) return 3;
+  if (count >= 9000) return 2;
+  return 1;
+}
+
+function getAdaptiveAlgaeSpacingInterval() {
+  const count = getTotalPreyCount();
+  if (count >= 20000) return 6;
+  if (count >= 12000) return 4;
+  if (count >= 7000) return 2;
+  return 1;
+}
+
+function getAdaptivePublishInterval() {
+  const count = getTotalPreyCount();
+  if (count >= 22000) return 3;
+  if (count >= 14000) return 2;
+  return 1;
+}
+
+function getAdaptiveAlgaeUpdateInterval() {
+  const count = getTotalPreyCount();
+  const algaeCount = state.algaes.length;
+  if (algaeCount >= 16000 || count >= 24000) return 4;
+  if (algaeCount >= 9000 || count >= 16000) return 3;
+  if (algaeCount >= 4000 || count >= 10000) return 2;
+  return 1;
+}
+
 function buildSpatialGrid() {
   const cellSize = Math.max(10, state.activePerception);
   const cols = Math.max(1, Math.ceil(state.width / cellSize));
@@ -2336,10 +2411,16 @@ function processPreyAlgaeFeeding() {
       params.fishAlgaeMealsToReproduce,
       state.boids.length,
       caps.fish,
-      params.fishPopulationPenalty
+      params.fishPopulationPenalty,
+      params.fishPopulationPenaltyDelay
     );
     if (fish.algaeMeals >= requiredMeals) {
-      const allowance = getSoftReproductionAllowance(state.boids.length, caps.fish, params.fishPopulationPenalty);
+      const allowance = getSoftReproductionAllowance(
+        state.boids.length,
+        caps.fish,
+        params.fishPopulationPenalty,
+        params.fishPopulationPenaltyDelay
+      );
       if (state.boids.length < caps.fish && Math.random() < allowance) {
         state.boids.push(spawnBoidNear(fish));
         spawnedFish += 1;
@@ -2366,10 +2447,16 @@ function processPreyAlgaeFeeding() {
       params.shrimpAlgaeMealsToReproduce,
       state.shrimps.length,
       caps.shrimp,
-      params.shrimpPopulationPenalty
+      params.shrimpPopulationPenalty,
+      params.shrimpPopulationPenaltyDelay
     );
     if (shrimp.algaeMeals >= requiredMeals) {
-      const allowance = getSoftReproductionAllowance(state.shrimps.length, caps.shrimp, params.shrimpPopulationPenalty);
+      const allowance = getSoftReproductionAllowance(
+        state.shrimps.length,
+        caps.shrimp,
+        params.shrimpPopulationPenalty,
+        params.shrimpPopulationPenaltyDelay
+      );
       if (state.shrimps.length < caps.shrimp && Math.random() < allowance) {
         state.shrimps.push(spawnShrimpNear(shrimp));
         spawnedShrimp += 1;
@@ -2404,7 +2491,11 @@ function processAlgaeGrowth(simStepMs) {
   const growth = Math.max(0, params.algaeGrowthRate);
   if (growth <= 0) return 0;
   const penalty = Math.max(0, params.algaePopulationPenalty);
-  const pressure = getCapPressure(algaeCount, cap);
+  const pressure = getDelayedPenaltyPressure(algaeCount, cap, params.algaePopulationPenaltyDelay);
+  // Delay now gates the entire penalty system:
+  // before delay threshold, effectivePenalty is 0;
+  // after threshold, it ramps up with delayed pressure.
+  const effectivePenalty = penalty * pressure;
 
   // Time-based cloning: each algae attempts to clone after an interval controlled by growth.
   // Higher growth -> shorter interval -> faster cloning.
@@ -2413,8 +2504,8 @@ function processAlgaeGrowth(simStepMs) {
   // Strong anti-exponential penalty:
   // - `effectiveCloners` saturates as count grows (near-linear total growth under penalty).
   // - `pressureBrake` sharply fades growth as population approaches cap.
-  const effectiveCloners = algaeCount / (1 + penalty * algaeCount * 0.01);
-  const pressureBrake = Math.pow(Math.max(0, 1 - pressure), 1.2 + penalty * 3.6);
+  const effectiveCloners = algaeCount / (1 + effectivePenalty * algaeCount * 0.01);
+  const pressureBrake = Math.pow(Math.max(0, 1 - pressure), 1.2 + effectivePenalty * 3.6);
   const expected = effectiveCloners * (simStepMs / cloneIntervalMs) * pressureBrake;
   if (expected <= 0) return 0;
 
@@ -2783,6 +2874,9 @@ function simulateStep() {
     state.elapsedMs += simStepMs;
     const flockInterval = getAdaptiveFlockInterval();
     const gridInterval = getAdaptiveGridInterval();
+    const spacingInterval = getAdaptiveSpacingInterval();
+    const algaeSpacingInterval = getAdaptiveAlgaeSpacingInterval();
+    const algaeUpdateInterval = getAdaptiveAlgaeUpdateInterval();
 
     if (!state.gridReady || (state.simTick % gridInterval) === 0) {
       buildSpatialGrid();
@@ -2792,7 +2886,7 @@ function simulateStep() {
       buildShrimpSpatialGrid();
       state.shrimpGridReady = true;
     }
-    if (!state.algaeGridReady || (state.simTick % gridInterval) === 0) {
+    if (!state.algaeGridReady) {
       buildAlgaeSpatialGrid();
       state.algaeGridReady = true;
     }
@@ -2829,78 +2923,98 @@ function simulateStep() {
       boid.edges();
     }
 
-    const fishGrid = {
-      heads: gridHeads,
-      next: nextIndices,
-      cellSize,
-      cols: gridCols,
-      rows: gridRows
-    };
+    FISH_GRID_REF.heads = gridHeads;
+    FISH_GRID_REF.next = nextIndices;
+    FISH_GRID_REF.cellSize = cellSize;
+    FISH_GRID_REF.cols = gridCols;
+    FISH_GRID_REF.rows = gridRows;
     for (let i = 0; i < state.shrimps.length; i += 1) {
       const shrimp = state.shrimps[i];
       const runNeighborhood = ((i + state.simTick) % flockInterval) === 0;
-      shrimp.flock(state.shrimps, shrimpHeads, shrimpNext, shrimpCellSize, shrimpCols, shrimpRows, fishGrid, runNeighborhood);
+      shrimp.flock(
+        state.shrimps,
+        shrimpHeads,
+        shrimpNext,
+        shrimpCellSize,
+        shrimpCols,
+        shrimpRows,
+        FISH_GRID_REF,
+        runNeighborhood
+      );
       shrimp.update(simDt);
       shrimp.edges();
     }
 
-    const shrimpGrid = {
-      heads: shrimpHeads,
-      next: shrimpNext,
-      cellSize: shrimpCellSize,
-      cols: shrimpCols,
-      rows: shrimpRows
-    };
-    const algaeGrid = {
-      heads: algaeHeads,
-      next: algaeNext,
-      cellSize: algaeCellSize,
-      cols: algaeCols,
-      rows: algaeRows
-    };
-    for (let i = 0; i < state.algaes.length; i += 1) {
-      state.algaes[i].update(simDt, fishGrid, shrimpGrid, algaeGrid, state.predators);
+    SHRIMP_GRID_REF.heads = shrimpHeads;
+    SHRIMP_GRID_REF.next = shrimpNext;
+    SHRIMP_GRID_REF.cellSize = shrimpCellSize;
+    SHRIMP_GRID_REF.cols = shrimpCols;
+    SHRIMP_GRID_REF.rows = shrimpRows;
+    ALGAE_GRID_REF.heads = algaeHeads;
+    ALGAE_GRID_REF.next = algaeNext;
+    ALGAE_GRID_REF.cellSize = algaeCellSize;
+    ALGAE_GRID_REF.cols = algaeCols;
+    ALGAE_GRID_REF.rows = algaeRows;
+    const runAlgaeUpdate = (state.simTick % algaeUpdateInterval) === 0;
+    if (runAlgaeUpdate) {
+      const algaeDt = simDt * algaeUpdateInterval;
+      for (let i = 0; i < state.algaes.length; i += 1) {
+        state.algaes[i].update(algaeDt, FISH_GRID_REF, SHRIMP_GRID_REF, ALGAE_GRID_REF, state.predators);
+      }
     }
 
-    // Enforce minimum in-species spacing so prey do not collapse into the same point.
-    buildSpatialGrid();
-    buildShrimpSpatialGrid();
-    buildAlgaeSpatialGrid();
-    enforceSpeciesSpacing(
-      state.boids,
-      state.gridHeads,
-      state.nextIndices,
-      state.gridCellSize,
-      state.gridCols,
-      state.gridRows,
-      1.05
-    );
-    enforceSpeciesSpacing(
-      state.shrimps,
-      state.shrimpGridHeads,
-      state.shrimpNextIndices,
-      state.shrimpGridCellSize,
-      state.shrimpGridCols,
-      state.shrimpGridRows,
-      1.2
-    );
-    enforceSpeciesSpacing(
-      state.algaes,
-      state.algaeGridHeads,
-      state.algaeNextIndices,
-      state.algaeGridCellSize,
-      state.algaeGridCols,
-      state.algaeGridRows,
-      0.95
-    );
-    for (let i = 0; i < state.boids.length; i += 1) {
-      state.boids[i].edges();
+    // Prey spacing is expensive at large populations; run it adaptively.
+    const runSpacing = (state.simTick % spacingInterval) === 0;
+    const runAlgaeSpacing = runAlgaeUpdate && (state.simTick % algaeSpacingInterval) === 0;
+    if (runSpacing) {
+      buildSpatialGrid();
+      buildShrimpSpatialGrid();
+      state.gridReady = true;
+      state.shrimpGridReady = true;
+      enforceSpeciesSpacing(
+        state.boids,
+        state.gridHeads,
+        state.nextIndices,
+        state.gridCellSize,
+        state.gridCols,
+        state.gridRows,
+        1.05
+      );
+      enforceSpeciesSpacing(
+        state.shrimps,
+        state.shrimpGridHeads,
+        state.shrimpNextIndices,
+        state.shrimpGridCellSize,
+        state.shrimpGridCols,
+        state.shrimpGridRows,
+        1.2
+      );
+      for (let i = 0; i < state.boids.length; i += 1) {
+        state.boids[i].edges();
+      }
+      for (let i = 0; i < state.shrimps.length; i += 1) {
+        state.shrimps[i].edges();
+      }
     }
-    for (let i = 0; i < state.shrimps.length; i += 1) {
-      state.shrimps[i].edges();
+    if (runAlgaeSpacing) {
+      buildAlgaeSpatialGrid();
+      state.algaeGridReady = true;
+      enforceSpeciesSpacing(
+        state.algaes,
+        state.algaeGridHeads,
+        state.algaeNextIndices,
+        state.algaeGridCellSize,
+        state.algaeGridCols,
+        state.algaeGridRows,
+        0.95
+      );
+      for (let i = 0; i < state.algaes.length; i += 1) {
+        state.algaes[i].edges();
+      }
     }
-    for (let i = 0; i < state.algaes.length; i += 1) {
-      state.algaes[i].edges();
+    // Keep algae grid current for feeding lookup only when algae positions changed.
+    if (runAlgaeUpdate || runAlgaeSpacing) {
+      state.algaeGridReady = false;
     }
 
     const algaeConsumedByPrey = processPreyAlgaeFeeding();
@@ -2914,6 +3028,8 @@ function simulateStep() {
     }
 
     state.simTick += 1;
+    publishFrame();
+    return;
   }
 
   publishFrame();
@@ -3008,8 +3124,11 @@ onmessage = (event) => {
         ) {
           remapPredatorSizes(oldBounds);
         }
-      } else if (data.key === "algaeToroidal" && typeof data.value === "boolean") {
-        params.algaeToroidal = data.value;
+      } else if (
+        (data.key === "algaeToroidal" || data.key === "fishToroidal" || data.key === "shrimpToroidal") &&
+        typeof data.value === "boolean"
+      ) {
+        params[data.key] = data.value;
       }
     }
     return;

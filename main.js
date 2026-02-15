@@ -8,6 +8,7 @@ const controlsHandle = document.getElementById("controlsHandle");
 const controlsHandleText = document.getElementById("controlsHandleText");
 const mobileQuickPanel = document.getElementById("mobileQuick");
 const mobileQuickSpeciesHost = document.getElementById("mobileQuickSpeciesHost");
+const speciesOverlayHost = document.getElementById("speciesOverlayHost");
 const mobileQuickStats = document.getElementById("mobileQuickStats");
 const mobileQuickSliders = document.getElementById("mobileQuickSliders");
 const mobileRecentControls = document.getElementById("mobileRecentControls");
@@ -25,7 +26,6 @@ const gameModeScreen = document.getElementById("gameModeScreen");
 const gameBackBtn = document.getElementById("gameBackBtn");
 const gameToSimulationBtn = document.getElementById("gameToSimulationBtn");
 const speciesSpawnButtons = Array.from(document.querySelectorAll(".species-chip"));
-const topBar = document.querySelector(".top-bar");
 const speciesBarEl = document.querySelector(".species-bar");
 const speciesChipEls = Object.fromEntries(
   speciesSpawnButtons
@@ -39,6 +39,8 @@ const speciesCountEls = {
   aurel: document.getElementById("speciesCountAurel"),
   zeno: document.getElementById("speciesCountZeno")
 };
+const fishWallControls = document.getElementById("fishWallControls");
+const shrimpWallControls = document.getElementById("shrimpWallControls");
 const algaeWallControls = document.getElementById("algaeWallControls");
 
 const controls = {
@@ -56,6 +58,8 @@ const controls = {
   fishAlgaeInterestCooldown: document.getElementById("fishAlgaeInterestCooldown"),
   fishAlgaeMealsToReproduce: document.getElementById("fishAlgaeMealsToReproduce"),
   fishPopulationPenalty: document.getElementById("fishPopulationPenalty"),
+  fishPopulationPenaltyDelay: document.getElementById("fishPopulationPenaltyDelay"),
+  fishToroidal: document.getElementById("fishToroidal"),
   shrimpCount: document.getElementById("shrimpCount"),
   shrimpPerception: document.getElementById("shrimpPerception"),
   shrimpSeparation: document.getElementById("shrimpSeparation"),
@@ -71,6 +75,8 @@ const controls = {
   shrimpAlgaeInterestCooldown: document.getElementById("shrimpAlgaeInterestCooldown"),
   shrimpAlgaeMealsToReproduce: document.getElementById("shrimpAlgaeMealsToReproduce"),
   shrimpPopulationPenalty: document.getElementById("shrimpPopulationPenalty"),
+  shrimpPopulationPenaltyDelay: document.getElementById("shrimpPopulationPenaltyDelay"),
+  shrimpToroidal: document.getElementById("shrimpToroidal"),
   algaeCount: document.getElementById("algaeCount"),
   algaePerception: document.getElementById("algaePerception"),
   algaeCurrentSensitivity: document.getElementById("algaeCurrentSensitivity"),
@@ -81,6 +87,7 @@ const controls = {
   algaeWallStrength: document.getElementById("algaeWallStrength"),
   algaeGrowthRate: document.getElementById("algaeGrowthRate"),
   algaePopulationPenalty: document.getElementById("algaePopulationPenalty"),
+  algaePopulationPenaltyDelay: document.getElementById("algaePopulationPenaltyDelay"),
   algaeToroidal: document.getElementById("algaeToroidal"),
   predatorSize: document.getElementById("predatorSize"),
   predatorGrowthSpan: document.getElementById("predatorGrowthSpan"),
@@ -195,7 +202,8 @@ const state = {
     startTimeMs: 0,
     didDrag: false,
     sourceChip: null
-  }
+  },
+  speciesBarIdleTimer: null
 };
 
 const params = {
@@ -213,6 +221,8 @@ const params = {
   fishAlgaeInterestCooldown: Number(controls.fishAlgaeInterestCooldown.value),
   fishAlgaeMealsToReproduce: Number(controls.fishAlgaeMealsToReproduce.value),
   fishPopulationPenalty: Number(controls.fishPopulationPenalty.value),
+  fishPopulationPenaltyDelay: Number(controls.fishPopulationPenaltyDelay.value),
+  fishToroidal: Boolean(controls.fishToroidal && controls.fishToroidal.checked),
   shrimpCount: Number(controls.shrimpCount.value),
   shrimpPerception: Number(controls.shrimpPerception.value),
   shrimpSeparation: Number(controls.shrimpSeparation.value),
@@ -229,6 +239,8 @@ const params = {
   shrimpAlgaeInterestCooldown: Number(controls.shrimpAlgaeInterestCooldown.value),
   shrimpAlgaeMealsToReproduce: Number(controls.shrimpAlgaeMealsToReproduce.value),
   shrimpPopulationPenalty: Number(controls.shrimpPopulationPenalty.value),
+  shrimpPopulationPenaltyDelay: Number(controls.shrimpPopulationPenaltyDelay.value),
+  shrimpToroidal: Boolean(controls.shrimpToroidal && controls.shrimpToroidal.checked),
   algaeCount: Number(controls.algaeCount.value),
   algaePerception: Number(controls.algaePerception.value),
   algaeCurrentSensitivity: Number(controls.algaeCurrentSensitivity.value),
@@ -239,6 +251,7 @@ const params = {
   algaeWallStrength: Number(controls.algaeWallStrength.value),
   algaeGrowthRate: Number(controls.algaeGrowthRate.value),
   algaePopulationPenalty: Number(controls.algaePopulationPenalty.value),
+  algaePopulationPenaltyDelay: Number(controls.algaePopulationPenaltyDelay.value),
   algaeToroidal: Boolean(controls.algaeToroidal && controls.algaeToroidal.checked),
   predatorSize: Number(controls.predatorSize.value),
   predatorGrowthSpan: Number(controls.predatorGrowthSpan.value),
@@ -279,6 +292,7 @@ const rangeControls = [
   controls.fishAlgaeInterestCooldown,
   controls.fishAlgaeMealsToReproduce,
   controls.fishPopulationPenalty,
+  controls.fishPopulationPenaltyDelay,
   controls.shrimpCount,
   controls.shrimpPerception,
   controls.shrimpSeparation,
@@ -294,6 +308,7 @@ const rangeControls = [
   controls.shrimpAlgaeInterestCooldown,
   controls.shrimpAlgaeMealsToReproduce,
   controls.shrimpPopulationPenalty,
+  controls.shrimpPopulationPenaltyDelay,
   controls.algaeCount,
   controls.algaePerception,
   controls.algaeCurrentSensitivity,
@@ -304,6 +319,7 @@ const rangeControls = [
   controls.algaeWallStrength,
   controls.algaeGrowthRate,
   controls.algaePopulationPenalty,
+  controls.algaePopulationPenaltyDelay,
   controls.predatorSize,
   controls.predatorGrowthSpan,
   controls.predatorThreat,
@@ -394,6 +410,8 @@ const controlCategoryMap = {
   fishAlgaeInterestCooldown: "prey",
   fishAlgaeMealsToReproduce: "prey",
   fishPopulationPenalty: "prey",
+  fishPopulationPenaltyDelay: "prey",
+  fishToroidal: "prey",
   shrimpCount: "prey",
   shrimpPerception: "prey",
   shrimpSeparation: "prey",
@@ -409,6 +427,8 @@ const controlCategoryMap = {
   shrimpAlgaeInterestCooldown: "prey",
   shrimpAlgaeMealsToReproduce: "prey",
   shrimpPopulationPenalty: "prey",
+  shrimpPopulationPenaltyDelay: "prey",
+  shrimpToroidal: "prey",
   algaeCount: "prey",
   algaePerception: "prey",
   algaeCurrentSensitivity: "prey",
@@ -419,6 +439,7 @@ const controlCategoryMap = {
   algaeWallStrength: "prey",
   algaeGrowthRate: "prey",
   algaePopulationPenalty: "prey",
+  algaePopulationPenaltyDelay: "prey",
   algaeToroidal: "prey",
   trail: "prey",
   predatorSize: "predator",
@@ -464,7 +485,8 @@ const predatorSpriteSourceMap = {
     widthMul: 0.96,
     bendMul: 1.28,
     slightTurnThreshold: 0.16,
-    bentTurnThreshold: 0.34
+    bentTurnThreshold: 0.34,
+    allowHardBend: false
   },
   2: {
     baseSrc: "./Zeno_Topdown.png",
@@ -518,26 +540,30 @@ function getPredatorSprite(kind, visual, turnSignal = 0) {
 
   const hard = Math.max(0.01, meta.bentTurnThreshold || 0.33);
   const mild = Math.max(0.005, Math.min(hard * 0.8, meta.slightTurnThreshold || hard * 0.52));
+  const allowHardBend = meta.allowHardBend !== false;
   const signalAbs = Math.abs(turnSignal);
   const dir = turnSignal >= 0 ? "right" : "left";
   const prev = visual && visual.spriteVariant ? visual.spriteVariant : "base";
 
   let variant = "base";
   if (signalAbs >= hard) {
-    variant = dir;
+    variant = allowHardBend ? dir : (dir === "right" ? "slightRight" : "slightLeft");
   } else if (signalAbs >= mild) {
     variant = dir === "right" ? "slightRight" : "slightLeft";
   }
 
   // Hysteresis prevents rapid sprite flipping when turn signal hovers around thresholds.
   if (dir === "right") {
-    if (prev === "right" && signalAbs >= hard * 0.58) variant = "right";
+    if (allowHardBend && prev === "right" && signalAbs >= hard * 0.58) variant = "right";
     else if (prev === "slightRight" && signalAbs >= mild * 0.54) variant = "slightRight";
   } else {
-    if (prev === "left" && signalAbs >= hard * 0.58) variant = "left";
+    if (allowHardBend && prev === "left" && signalAbs >= hard * 0.58) variant = "left";
     else if (prev === "slightLeft" && signalAbs >= mild * 0.54) variant = "slightLeft";
   }
   if (signalAbs < mild * 0.36) variant = "base";
+  if (!allowHardBend && (variant === "left" || variant === "right")) {
+    variant = variant === "right" ? "slightRight" : "slightLeft";
+  }
   if (visual) visual.spriteVariant = variant;
 
   const fallbackByVariant = {
@@ -838,13 +864,9 @@ function updateMobileSheetPeek() {
 }
 
 function syncSpeciesBarHostForViewport() {
-  if (!speciesBarEl || !topBar || !mobileQuickSpeciesHost) return;
-  if (isMobileControlsLayout()) {
-    if (speciesBarEl.parentElement !== mobileQuickSpeciesHost) {
-      mobileQuickSpeciesHost.appendChild(speciesBarEl);
-    }
-  } else if (speciesBarEl.parentElement !== topBar) {
-    topBar.appendChild(speciesBarEl);
+  if (!speciesBarEl || !speciesOverlayHost) return;
+  if (speciesBarEl.parentElement !== speciesOverlayHost) {
+    speciesOverlayHost.appendChild(speciesBarEl);
   }
 }
 
@@ -1023,10 +1045,34 @@ function updateSpeciesVisibilityUI(species) {
   chip.setAttribute("aria-pressed", String(!visible));
 }
 
+const SPECIES_OVERLAY_IDLE_MS = 2300;
+
+function setSpeciesBarIdle(idle) {
+  if (!speciesBarEl) return;
+  speciesBarEl.classList.toggle("is-idle", Boolean(idle));
+}
+
+function noteSpeciesBarInteraction() {
+  if (!speciesBarEl) return;
+  setSpeciesBarIdle(false);
+  if (state.speciesBarIdleTimer) {
+    window.clearTimeout(state.speciesBarIdleTimer);
+    state.speciesBarIdleTimer = null;
+  }
+  state.speciesBarIdleTimer = window.setTimeout(() => {
+    if (state.spawnDrag.active) {
+      noteSpeciesBarInteraction();
+      return;
+    }
+    setSpeciesBarIdle(true);
+  }, SPECIES_OVERLAY_IDLE_MS);
+}
+
 function toggleSpeciesVisibility(species) {
   if (!(species in state.speciesVisibility)) return;
   state.speciesVisibility[species] = !state.speciesVisibility[species];
   updateSpeciesVisibilityUI(species);
+  noteSpeciesBarInteraction();
 }
 
 function createSpawnGhost(species, x, y) {
@@ -1035,6 +1081,8 @@ function createSpawnGhost(species, x, y) {
   ghost.innerHTML = '<span class="species-icon" aria-hidden="true"></span>';
   ghost.style.left = `${x}px`;
   ghost.style.top = `${y}px`;
+  ghost.style.transform = "translate(-50%, -50%) scale(1)";
+  ghost.style.opacity = "1";
   document.body.appendChild(ghost);
   return ghost;
 }
@@ -1043,6 +1091,23 @@ function setSpawnGhostPosition(ghost, x, y) {
   if (!ghost) return;
   ghost.style.left = `${x}px`;
   ghost.style.top = `${y}px`;
+}
+
+function setSpawnGhostVisual(ghost, scale, opacity = 1) {
+  if (!ghost) return;
+  ghost.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  ghost.style.opacity = String(opacity);
+}
+
+function createDropSplash(x, y, species = "") {
+  const splash = document.createElement("div");
+  splash.className = `spawn-drop-splash species-${species}`;
+  splash.style.left = `${x}px`;
+  splash.style.top = `${y}px`;
+  document.body.appendChild(splash);
+  splash.addEventListener("animationend", () => {
+    if (splash.parentNode) splash.parentNode.removeChild(splash);
+  }, { once: true });
 }
 
 function removeSpawnGhost() {
@@ -1104,6 +1169,9 @@ function animateDropAndSpawn(species, fromX, fromY, drop) {
     const x = fromX + (endX - fromX) * ease;
     const y = fromY + (endY - fromY) * ease;
     setSpawnGhostPosition(ghost, x, y);
+    const scale = 1 - ease * 0.72;
+    const opacity = 1 - ease * 0.24;
+    setSpawnGhostVisual(ghost, Math.max(0.22, scale), Math.max(0.2, opacity));
 
     if (t < 1) {
       requestAnimationFrame(step);
@@ -1111,7 +1179,10 @@ function animateDropAndSpawn(species, fromX, fromY, drop) {
     }
 
     removeSpawnGhost();
-    postToWorker({ type: "spawnCreature", species, x: drop.worldX, y: drop.worldY });
+    createDropSplash(endX, endY, species);
+    window.setTimeout(() => {
+      postToWorker({ type: "spawnCreature", species, x: drop.worldX, y: drop.worldY });
+    }, 80);
   };
 
   requestAnimationFrame(step);
@@ -1122,11 +1193,12 @@ function beginSpeciesSpawnDrag(event) {
   if (!(chip instanceof HTMLElement)) return;
   const species = chip.dataset.species;
   if (!species) return;
+  noteSpeciesBarInteraction();
 
   state.spawnDrag.active = true;
   state.spawnDrag.pointerId = event.pointerId;
   state.spawnDrag.pointerType = event.pointerType || "mouse";
-  state.spawnDrag.intent = state.spawnDrag.pointerType === "touch" ? "pending" : "drag";
+  state.spawnDrag.intent = "pending";
   state.spawnDrag.species = species;
   state.spawnDrag.startX = event.clientX;
   state.spawnDrag.startY = event.clientY;
@@ -1134,14 +1206,10 @@ function beginSpeciesSpawnDrag(event) {
   state.spawnDrag.didDrag = false;
   state.spawnDrag.sourceChip = chip;
   event.stopPropagation();
-  if (state.spawnDrag.intent === "drag") {
+  if (state.spawnDrag.pointerType !== "touch") {
     try {
       chip.setPointerCapture(event.pointerId);
     } catch (_) {}
-  }
-
-  if (state.spawnDrag.intent === "drag" && state.simulationStarted && state.worker) {
-    state.spawnDrag.ghost = createSpawnGhost(species, event.clientX, event.clientY);
   }
 }
 
@@ -1153,23 +1221,32 @@ function updateSpeciesSpawnDrag(event) {
   const distSq = dx * dx + dy * dy;
 
   if (state.spawnDrag.intent === "pending") {
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
-    if (absDx < 8 && absDy < 8) return;
-
-    if (absDx > absDy * 1.08) {
-      state.spawnDrag.intent = "scroll";
-      return;
-    }
-
-    if (dy < -6 && absDy >= absDx * 0.85) {
+    if (state.spawnDrag.pointerType !== "touch") {
+      if (distSq < 16) return;
       state.spawnDrag.intent = "drag";
       state.spawnDrag.didDrag = true;
       if (state.simulationStarted && state.worker && !state.spawnDrag.ghost) {
         state.spawnDrag.ghost = createSpawnGhost(state.spawnDrag.species, event.clientX, event.clientY);
       }
     } else {
-      return;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+      if (absDx < 8 && absDy < 8) return;
+
+      if (absDx > absDy * 1.08) {
+        state.spawnDrag.intent = "scroll";
+        return;
+      }
+
+      if (dy < -6 && absDy >= absDx * 0.85) {
+        state.spawnDrag.intent = "drag";
+        state.spawnDrag.didDrag = true;
+        if (state.simulationStarted && state.worker && !state.spawnDrag.ghost) {
+          state.spawnDrag.ghost = createSpawnGhost(state.spawnDrag.species, event.clientX, event.clientY);
+        }
+      } else {
+        return;
+      }
     }
   }
 
@@ -1177,11 +1254,13 @@ function updateSpeciesSpawnDrag(event) {
 
   if (!state.spawnDrag.didDrag && distSq >= 9) state.spawnDrag.didDrag = true;
   setSpawnGhostPosition(state.spawnDrag.ghost, event.clientX, event.clientY);
+  noteSpeciesBarInteraction();
 }
 
 function endSpeciesSpawnDrag(event) {
   if (!state.spawnDrag.active) return;
   if (event.pointerId !== state.spawnDrag.pointerId) return;
+  noteSpeciesBarInteraction();
 
   const intent = state.spawnDrag.intent;
   const species = state.spawnDrag.species;
@@ -1193,7 +1272,7 @@ function endSpeciesSpawnDrag(event) {
   const dx = fromX - state.spawnDrag.startX;
   const dy = fromY - state.spawnDrag.startY;
   const distSq = dx * dx + dy * dy;
-  const isTap = intent === "pending" && distSq < 49 && elapsed < 320;
+  const isTap = intent === "pending" && distSq < 49 && elapsed < 420;
 
   releaseSpawnPointerCapture(event.pointerId);
   resetSpawnDragState();
@@ -1215,6 +1294,7 @@ function endSpeciesSpawnDrag(event) {
   }
 
   animateDropAndSpawn(species, fromX, fromY, drop);
+  noteSpeciesBarInteraction();
 }
 
 function getTargetDpr() {
@@ -1314,6 +1394,9 @@ function resize() {
 
 function formatControlValue(control) {
   const value = Number(control.value);
+  if (control.id.endsWith("PopulationPenaltyDelay")) {
+    return `${Math.round(value)}%`;
+  }
   if ((control.id === "count" || control.id === "shrimpCount" || control.id === "algaeCount") && value >= 1000) {
     const k = value / 1000;
     const decimals = k >= 10 ? 0 : 1;
@@ -1346,7 +1429,11 @@ function updateSliderReadout(control) {
 
   const pctBadge = sliderPct[control.id];
   if (pctBadge) {
-    pctBadge.textContent = `${Math.round(pctOfMax)}%`;
+    if (control.id.endsWith("PopulationPenaltyDelay")) {
+      pctBadge.textContent = `${Math.round(value)}%`;
+    } else {
+      pctBadge.textContent = `${Math.round(pctOfMax)}%`;
+    }
   }
 }
 
@@ -1406,6 +1493,12 @@ function bindToggleControl(control, key) {
   control.addEventListener("change", () => {
     const checked = Boolean(control.checked);
     params[key] = checked;
+    if (key === "fishToroidal" && fishWallControls) {
+      fishWallControls.classList.toggle("is-hidden", checked);
+    }
+    if (key === "shrimpToroidal" && shrimpWallControls) {
+      shrimpWallControls.classList.toggle("is-hidden", checked);
+    }
     if (key === "algaeToroidal" && algaeWallControls) {
       algaeWallControls.classList.toggle("is-hidden", checked);
     }
@@ -1414,8 +1507,15 @@ function bindToggleControl(control, key) {
 }
 
 function syncAlgaeWallControlsVisibility() {
-  if (!algaeWallControls || !controls.algaeToroidal) return;
-  algaeWallControls.classList.toggle("is-hidden", Boolean(controls.algaeToroidal.checked));
+  if (fishWallControls && controls.fishToroidal) {
+    fishWallControls.classList.toggle("is-hidden", Boolean(controls.fishToroidal.checked));
+  }
+  if (shrimpWallControls && controls.shrimpToroidal) {
+    shrimpWallControls.classList.toggle("is-hidden", Boolean(controls.shrimpToroidal.checked));
+  }
+  if (algaeWallControls && controls.algaeToroidal) {
+    algaeWallControls.classList.toggle("is-hidden", Boolean(controls.algaeToroidal.checked));
+  }
 }
 
 function applyControlValue(control, value) {
@@ -1463,15 +1563,37 @@ function resetScalingOnly() {
 
 function fullRestart() {
   rangeControls.forEach((control) => applyControlValue(control, control.defaultValue));
+  if (controls.fishToroidal) {
+    controls.fishToroidal.checked = controls.fishToroidal.defaultChecked;
+    params.fishToroidal = Boolean(controls.fishToroidal.checked);
+    postToWorker({ type: "setParam", key: "fishToroidal", value: params.fishToroidal });
+  }
+  if (controls.shrimpToroidal) {
+    controls.shrimpToroidal.checked = controls.shrimpToroidal.defaultChecked;
+    params.shrimpToroidal = Boolean(controls.shrimpToroidal.checked);
+    postToWorker({ type: "setParam", key: "shrimpToroidal", value: params.shrimpToroidal });
+  }
   if (controls.algaeToroidal) {
     controls.algaeToroidal.checked = controls.algaeToroidal.defaultChecked;
     params.algaeToroidal = Boolean(controls.algaeToroidal.checked);
     postToWorker({ type: "setParam", key: "algaeToroidal", value: params.algaeToroidal });
   }
+  syncAlgaeWallControlsVisibility();
   setActiveTab("stats");
   setActivePredatorTab("a");
   restartWithCurrentSettings();
 }
+
+const CONTROL_GROUP_OPEN_LIMIT = 2;
+const controlGroupOpenOrderBySection = new WeakMap();
+const INITIAL_OPEN_GROUPS_BY_SECTION = {
+  panelScaper: ["Input", "World Bounds"],
+  preyPanelFish: ["Rendering"],
+  preyPanelShrimp: ["Cross-Species"],
+  preyPanelAlgae: ["Walls"],
+  predatorPanelA: ["Sprint"],
+  predatorPanelB: ["Sprint"]
+};
 
 function setControlGroupCollapsed(header, collapsed) {
   if (!header) return;
@@ -1483,6 +1605,28 @@ function setControlGroupCollapsed(header, collapsed) {
     node.classList.toggle("group-collapsed-item", collapsed);
     node = node.nextElementSibling;
   }
+}
+
+function noteControlGroupOpened(section, header) {
+  if (!section || !header) return;
+  const current = controlGroupOpenOrderBySection.get(section) || [];
+  const next = current.filter((item) => item !== header && !item.classList.contains("is-collapsed"));
+  next.push(header);
+  while (next.length > CONTROL_GROUP_OPEN_LIMIT) {
+    const oldest = next.shift();
+    if (oldest) setControlGroupCollapsed(oldest, true);
+  }
+  controlGroupOpenOrderBySection.set(section, next);
+}
+
+function applyInitialControlGroupState(section, headers) {
+  const wanted = new Set(INITIAL_OPEN_GROUPS_BY_SECTION[section.id] || []);
+  headers.forEach((header) => {
+    const label = (header.textContent || "").trim();
+    const shouldOpen = wanted.has(label);
+    setControlGroupCollapsed(header, !shouldOpen);
+    if (shouldOpen) noteControlGroupOpened(section, header);
+  });
 }
 
 function setupControlCategoryDropdowns() {
@@ -1502,16 +1646,39 @@ function setupControlCategoryDropdowns() {
 
       header.addEventListener("click", () => {
         const isCollapsed = header.classList.contains("is-collapsed");
-        setControlGroupCollapsed(header, !isCollapsed);
+        if (isCollapsed) {
+          setControlGroupCollapsed(header, false);
+          noteControlGroupOpened(section, header);
+        } else {
+          setControlGroupCollapsed(header, true);
+          const current = controlGroupOpenOrderBySection.get(section) || [];
+          controlGroupOpenOrderBySection.set(
+            section,
+            current.filter((item) => item !== header && !item.classList.contains("is-collapsed"))
+          );
+        }
       });
 
       header.addEventListener("keydown", (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
         const isCollapsed = header.classList.contains("is-collapsed");
-        setControlGroupCollapsed(header, !isCollapsed);
+        if (isCollapsed) {
+          setControlGroupCollapsed(header, false);
+          noteControlGroupOpened(section, header);
+        } else {
+          setControlGroupCollapsed(header, true);
+          const current = controlGroupOpenOrderBySection.get(section) || [];
+          controlGroupOpenOrderBySection.set(
+            section,
+            current.filter((item) => item !== header && !item.classList.contains("is-collapsed"))
+          );
+        }
       });
     });
+
+    const readyHeaders = Array.from(section.querySelectorAll(":scope > .control-group-title.group-dropdown"));
+    applyInitialControlGroupState(section, readyHeaders);
   });
 }
 
@@ -2253,6 +2420,7 @@ bindControl(controls.wallStrength, "wallStrength");
 bindControl(controls.fishAlgaeInterestCooldown, "fishAlgaeInterestCooldown");
 bindControl(controls.fishAlgaeMealsToReproduce, "fishAlgaeMealsToReproduce");
 bindControl(controls.fishPopulationPenalty, "fishPopulationPenalty");
+bindControl(controls.fishPopulationPenaltyDelay, "fishPopulationPenaltyDelay");
 bindControl(controls.shrimpCount, "shrimpCount");
 bindControl(controls.shrimpPerception, "shrimpPerception");
 bindControl(controls.shrimpSeparation, "shrimpSeparation");
@@ -2268,6 +2436,7 @@ bindControl(controls.shrimpFishAvoidance, "shrimpFishAvoidance");
 bindControl(controls.shrimpAlgaeInterestCooldown, "shrimpAlgaeInterestCooldown");
 bindControl(controls.shrimpAlgaeMealsToReproduce, "shrimpAlgaeMealsToReproduce");
 bindControl(controls.shrimpPopulationPenalty, "shrimpPopulationPenalty");
+bindControl(controls.shrimpPopulationPenaltyDelay, "shrimpPopulationPenaltyDelay");
 bindControl(controls.algaeCount, "algaeCount");
 bindControl(controls.algaePerception, "algaePerception");
 bindControl(controls.algaeCurrentSensitivity, "algaeCurrentSensitivity");
@@ -2278,6 +2447,9 @@ bindControl(controls.algaeWallFade, "algaeWallFade");
 bindControl(controls.algaeWallStrength, "algaeWallStrength");
 bindControl(controls.algaeGrowthRate, "algaeGrowthRate");
 bindControl(controls.algaePopulationPenalty, "algaePopulationPenalty");
+bindControl(controls.algaePopulationPenaltyDelay, "algaePopulationPenaltyDelay");
+bindToggleControl(controls.fishToroidal, "fishToroidal");
+bindToggleControl(controls.shrimpToroidal, "shrimpToroidal");
 bindToggleControl(controls.algaeToroidal, "algaeToroidal");
 bindControl(controls.predatorSize, "predatorSize");
 bindControl(controls.predatorGrowthSpan, "predatorGrowthSpan");
@@ -2334,6 +2506,11 @@ syncControlsMenuForViewport();
 updateStatsView();
 preloadPredatorSprites();
 Object.keys(state.speciesVisibility).forEach(updateSpeciesVisibilityUI);
+if (speciesBarEl) {
+  ["pointerdown", "touchstart", "wheel"].forEach((eventName) => {
+    speciesBarEl.addEventListener(eventName, noteSpeciesBarInteraction, { passive: true });
+  });
+}
 speciesSpawnButtons.forEach((button) => {
   button.addEventListener("pointerdown", beginSpeciesSpawnDrag);
 });
@@ -2345,6 +2522,7 @@ window.addEventListener("pointercancel", () => {
   resetSpawnDragState();
   removeSpawnGhost();
 });
+noteSpeciesBarInteraction();
 
 if (controlsHandle) {
   controlsHandle.addEventListener("click", () => {

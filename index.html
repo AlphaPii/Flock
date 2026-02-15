@@ -62,6 +62,7 @@
       <canvas id="world" aria-label="Fish schooling simulation"></canvas>
       <canvas id="predator-layer" aria-hidden="true"></canvas>
       <div class="hud" id="hud"></div>
+      <div id="speciesOverlayHost" class="species-overlay-host" aria-label="Creature cards overlay"></div>
     </section>
 
     <aside id="controlsPanel" class="panel controls" aria-label="Menu">
@@ -237,6 +238,16 @@
           </div>
 
           <p class="control-group-title">Walls</p>
+          <div class="control-item control-item-toggle">
+            <div class="control-head">
+              <label for="fishToroidal">Toroidal Borders</label>
+              <small class="hint">If enabled, fish wraps through opposite edges instead of bouncing off walls.</small>
+            </div>
+            <div class="toggle-wrap">
+              <input id="fishToroidal" type="checkbox" />
+            </div>
+          </div>
+          <div id="fishWallControls" class="fish-wall-controls">
           <div class="control-item">
             <div class="control-head">
               <label for="wallReach">Wall Reach <span id="wallReachPct" class="label-pct"></span></label>
@@ -268,6 +279,7 @@
               <input id="wallStrength" type="range" min="0" max="2" step="0.01" value="1" />
               <output id="wallStrengthMeta" class="slider-meta" for="wallStrength"></output>
             </div>
+          </div>
           </div>
 
           <p class="control-group-title">Algae Feeding</p>
@@ -301,6 +313,17 @@
             <div class="slider-wrap">
               <input id="fishPopulationPenalty" type="range" min="0" max="6" step="0.05" value="1" />
               <output id="fishPopulationPenaltyMeta" class="slider-meta" for="fishPopulationPenalty"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="fishPopulationPenaltyDelay">Penalty Delay <span id="fishPopulationPenaltyDelayPct" class="label-pct"></span></label>
+              <small class="hint">Population % of fish cap where penalty begins (0 = immediate, 95 = very late).</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="fishPopulationPenaltyDelay" type="range" min="0" max="95" step="1" value="33" />
+              <output id="fishPopulationPenaltyDelayMeta" class="slider-meta" for="fishPopulationPenaltyDelay"></output>
             </div>
           </div>
 
@@ -410,6 +433,16 @@
           </div>
 
           <p class="control-group-title">Walls</p>
+          <div class="control-item control-item-toggle">
+            <div class="control-head">
+              <label for="shrimpToroidal">Toroidal Borders</label>
+              <small class="hint">If enabled, shrimp wraps through opposite edges instead of bouncing off walls.</small>
+            </div>
+            <div class="toggle-wrap">
+              <input id="shrimpToroidal" type="checkbox" />
+            </div>
+          </div>
+          <div id="shrimpWallControls" class="shrimp-wall-controls">
           <div class="control-item">
             <div class="control-head">
               <label for="shrimpWallReach">Wall Reach <span id="shrimpWallReachPct" class="label-pct"></span></label>
@@ -441,6 +474,7 @@
               <input id="shrimpWallStrength" type="range" min="0" max="2" step="0.01" value="1" />
               <output id="shrimpWallStrengthMeta" class="slider-meta" for="shrimpWallStrength"></output>
             </div>
+          </div>
           </div>
 
           <p class="control-group-title">Cross-Species</p>
@@ -488,6 +522,17 @@
               <output id="shrimpPopulationPenaltyMeta" class="slider-meta" for="shrimpPopulationPenalty"></output>
             </div>
           </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="shrimpPopulationPenaltyDelay">Penalty Delay <span id="shrimpPopulationPenaltyDelayPct" class="label-pct"></span></label>
+              <small class="hint">Population % of shrimp cap where penalty begins (0 = immediate, 95 = very late).</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="shrimpPopulationPenaltyDelay" type="range" min="0" max="95" step="1" value="0" />
+              <output id="shrimpPopulationPenaltyDelayMeta" class="slider-meta" for="shrimpPopulationPenaltyDelay"></output>
+            </div>
+          </div>
         </section>
 
         <section id="preyPanelAlgae" class="prey-subpanel" role="tabpanel" aria-labelledby="preyTabAlgae" hidden>
@@ -521,7 +566,7 @@
               <small class="hint">How strongly algae follows the local average movement.</small>
             </div>
             <div class="slider-wrap">
-              <input id="algaeCurrentSensitivity" type="range" min="0" max="3" step="0.05" value="0.8" />
+              <input id="algaeCurrentSensitivity" type="range" min="0" max="3" step="0.05" value="0.9" />
               <output id="algaeCurrentSensitivityMeta" class="slider-meta" for="algaeCurrentSensitivity"></output>
             </div>
           </div>
@@ -532,7 +577,7 @@
               <small class="hint">How strongly algae spreads away from nearby algae.</small>
             </div>
             <div class="slider-wrap">
-              <input id="algaeSeparation" type="range" min="0" max="3" step="0.05" value="0.4" />
+              <input id="algaeSeparation" type="range" min="0" max="3" step="0.05" value="0.2" />
               <output id="algaeSeparationMeta" class="slider-meta" for="algaeSeparation"></output>
             </div>
           </div>
@@ -543,7 +588,7 @@
               <small class="hint">Max self-propelled speed for algae-driven separation.</small>
             </div>
             <div class="slider-wrap">
-              <input id="algaeSpeed" type="range" min="0" max="3" step="0.05" value="0.8" />
+              <input id="algaeSpeed" type="range" min="0" max="3" step="0.05" value="0.5" />
               <output id="algaeSpeedMeta" class="slider-meta" for="algaeSpeed"></output>
             </div>
           </div>
@@ -555,7 +600,7 @@
               <small class="hint">How quickly algae reproduces at low population pressure.</small>
             </div>
             <div class="slider-wrap">
-              <input id="algaeGrowthRate" type="range" min="0" max="2" step="0.01" value="2" />
+              <input id="algaeGrowthRate" type="range" min="0" max="2" step="0.01" value="1.88" />
               <output id="algaeGrowthRateMeta" class="slider-meta" for="algaeGrowthRate"></output>
             </div>
           </div>
@@ -566,8 +611,19 @@
               <small class="hint">How strongly algae growth is reduced as algae population rises.</small>
             </div>
             <div class="slider-wrap">
-              <input id="algaePopulationPenalty" type="range" min="0" max="6" step="0.05" value="0" />
+              <input id="algaePopulationPenalty" type="range" min="0" max="6" step="0.05" value="3" />
               <output id="algaePopulationPenaltyMeta" class="slider-meta" for="algaePopulationPenalty"></output>
+            </div>
+          </div>
+
+          <div class="control-item">
+            <div class="control-head">
+              <label for="algaePopulationPenaltyDelay">Penalty Delay <span id="algaePopulationPenaltyDelayPct" class="label-pct"></span></label>
+              <small class="hint">Population % of algae cap where penalty begins (0 = immediate, 95 = very late).</small>
+            </div>
+            <div class="slider-wrap">
+              <input id="algaePopulationPenaltyDelay" type="range" min="0" max="95" step="1" value="33" />
+              <output id="algaePopulationPenaltyDelayMeta" class="slider-meta" for="algaePopulationPenaltyDelay"></output>
             </div>
           </div>
 

@@ -31,8 +31,8 @@ body {
 
 body {
   display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 12px;
+  grid-template-rows: 1fr;
+  gap: 0;
   padding:
     calc(env(safe-area-inset-top) + 12px)
     calc(env(safe-area-inset-right) + 12px)
@@ -151,36 +151,79 @@ body.mode-game .game-mode {
 }
 
 .top-bar {
-  padding: 6px 8px;
+  display: none;
 }
 
 .species-bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 14px;
   align-items: stretch;
+  justify-content: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.species-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.species-overlay-host {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  z-index: 3;
+  width: min(calc(100% - 24px), 980px);
+  pointer-events: none;
+}
+
+.species-overlay-host .species-bar {
+  pointer-events: auto;
+  transition: opacity 220ms ease, filter 220ms ease;
+  width: 100%;
+  justify-content: space-evenly;
+  gap: 0;
+  padding: 0 8px;
+}
+
+.species-overlay-host .species-bar.is-idle {
+  opacity: 1;
+  filter: none;
+}
+
+.species-overlay-host .species-bar.is-idle .species-chip {
+  opacity: 0.42;
+  filter: saturate(0.82) brightness(0.92);
+}
+
+.species-overlay-host .species-bar.is-idle .species-chip:hover,
+.species-overlay-host .species-bar.is-idle .species-chip:focus-visible {
+  opacity: 1;
+  filter: brightness(1.12) saturate(1.06);
 }
 
 .species-chip {
   border: 1px solid #6fa3dd66;
   border-radius: 8px;
-  background: #0d2743cc;
+  background: #0d27438a;
   color: #c7ddfb;
-  padding: 5px 7px;
+  padding: 7px 9px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 36px minmax(0, 1fr);
   grid-template-rows: auto auto;
   align-items: center;
-  column-gap: 7px;
+  column-gap: 8px;
   row-gap: 1px;
-  width: 160px;
-  min-width: 148px;
-  max-width: 168px;
-  flex: 0 0 auto;
+  width: auto;
+  min-width: 120px;
+  max-width: none;
+  flex: 0 1 auto;
   cursor: grab;
   user-select: none;
   touch-action: manipulation;
-  transition: filter 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+  transition: opacity 140ms ease, filter 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
 .species-chip:active {
@@ -196,7 +239,7 @@ body.mode-game .game-mode {
   grid-row: 1;
   text-align: right;
   justify-self: end;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -209,7 +252,7 @@ body.mode-game .game-mode {
   grid-row: 2;
   text-align: right;
   justify-self: end;
-  font-size: 0.95rem;
+  font-size: 1.12rem;
   font-weight: 700;
   line-height: 1;
   color: #e4f1ff;
@@ -218,9 +261,11 @@ body.mode-game .game-mode {
 .species-icon {
   grid-column: 1;
   grid-row: 1 / span 2;
-  width: 34px;
-  height: 34px;
-  border-radius: 7px;
+  width: 36px;
+  height: 36px;
+  align-self: center;
+  justify-self: start;
+  border-radius: 6px;
   background-repeat: no-repeat;
   background-position: 50% 50%;
   background-size: 280% auto;
@@ -271,20 +316,46 @@ body.mode-game .game-mode {
   position: fixed;
   width: 56px;
   height: 56px;
-  border-radius: 999px;
+  border-radius: 0;
   display: grid;
   place-items: center;
   pointer-events: none;
   z-index: 50;
-  background: radial-gradient(circle at 30% 25%, #1b4e78dd, #0d274399);
-  border: 1px solid #7be0c6aa;
-  box-shadow: 0 8px 22px #0009;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   transform: translate(-50%, -50%);
+  will-change: transform, opacity;
 }
 
 .spawn-drag-ghost .species-icon {
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
+}
+
+.spawn-drop-splash {
+  position: fixed;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 49;
+  transform: translate(-50%, -50%) scale(0.25);
+  border: 1.5px solid #9be8ff;
+  box-shadow: 0 0 10px #8ddfff66;
+  opacity: 0.95;
+  animation: dropSplash 260ms ease-out forwards;
+}
+
+@keyframes dropSplash {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(0.25);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.9);
+  }
 }
 
 .layout {
@@ -569,6 +640,11 @@ body.mode-game .game-mode {
 }
 
 .algae-wall-controls.is-hidden {
+  display: none;
+}
+
+.fish-wall-controls.is-hidden,
+.shrimp-wall-controls.is-hidden {
   display: none;
 }
 
@@ -867,7 +943,7 @@ button:hover {
   }
 
   .mobile-species-host {
-    display: block;
+    display: none;
     min-height: 0;
   }
 
@@ -880,7 +956,7 @@ button:hover {
   #mobileQuickSpeciesHost .species-bar {
     display: flex;
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 12px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
@@ -888,32 +964,38 @@ button:hover {
     scrollbar-width: none;
   }
 
+  .species-overlay-host {
+    bottom: calc(env(safe-area-inset-bottom) + 128px);
+    width: min(calc(100% - 14px), 760px);
+  }
+
   #mobileQuickSpeciesHost .species-bar::-webkit-scrollbar {
     display: none;
   }
 
   #mobileQuickSpeciesHost .species-chip {
-    min-width: 124px;
-    width: 132px;
-    max-width: 140px;
-    padding: 5px 6px;
-    grid-template-columns: 30px minmax(0, 1fr);
-    column-gap: 6px;
+    min-width: 94px;
+    width: auto;
+    max-width: none;
+    padding: 4px 6px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    column-gap: 5px;
     border-radius: 9px;
+    flex: 0 0 auto;
     touch-action: pan-x;
   }
 
   #mobileQuickSpeciesHost .species-icon {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
   }
 
   #mobileQuickSpeciesHost .species-name {
-    font-size: 0.67rem;
+    font-size: 0.64rem;
   }
 
   #mobileQuickSpeciesHost .species-count {
-    font-size: 0.88rem;
+    font-size: 0.84rem;
   }
 
   .mobile-quick-title {
